@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { repository } from "@/lib/repository";
+import { getWebsiteFromFirebase, saveWebsiteToFirebase } from "@/lib/firebase-service";
 
 export async function GET(
   _request: Request,
@@ -7,7 +8,18 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const website = repository.getWebsite(id);
+    let website = repository.getWebsite(id);
+
+    if (!website || !website.landingPageData) {
+      try {
+        const fbSite = await getWebsiteFromFirebase(id);
+        if (fbSite) {
+          website = fbSite;
+        }
+      } catch (err) {
+        console.warn("Firebase GET fetch error:", err);
+      }
+    }
 
     if (!website) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
@@ -22,7 +34,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+async function handleUpdate(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -35,6 +47,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
+    try {
+      await saveWebsiteToFirebase(updated);
+    } catch (fbErr) {
+      console.warn("Firebase update sync warning:", fbErr);
+    }
+
     return NextResponse.json(updated);
   } catch (error) {
     return NextResponse.json(
@@ -42,6 +60,20 @@ export async function PATCH(
       { status: 500 }
     );
   }
+}
+
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, context);
+}
+
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, context);
 }
 
 export async function DELETE(

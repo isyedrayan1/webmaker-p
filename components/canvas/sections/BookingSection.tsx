@@ -21,12 +21,14 @@ export function BookingSection({ data, onChange, theme }: BookingSectionProps) {
   return (
     <section className="border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-6 py-20">
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-12 lg:grid-cols-2">
+        <div className="grid gap-12 lg:grid-cols-2 items-start">
           {/* Clinic Contact Details */}
           <div>
             <EditableText
-              value={data.eyebrow}
+              value={data.eyebrow || ""}
               onChange={(v) => updateField("eyebrow", v)}
+              maxLength={40}
+              fieldName="Booking Eyebrow"
               tag="p"
               className="font-mono-app text-xs uppercase tracking-[.15em] font-semibold"
               style={{ color: theme.primary }}
@@ -35,14 +37,19 @@ export function BookingSection({ data, onChange, theme }: BookingSectionProps) {
               <EditableText
                 value={data.headline}
                 onChange={(v) => updateField("headline", v)}
+                maxLength={120}
+                fieldName="Booking Headline"
                 tag="h2"
                 className="font-display text-3xl sm:text-4xl text-[hsl(var(--foreground))]"
               />
             </div>
             <div className="mt-3">
               <EditableText
-                value={data.description}
+                value={data.description || ""}
                 onChange={(v) => updateField("description", v)}
+                maxLength={300}
+                maxLines={4}
+                fieldName="Booking Description"
                 tag="p"
                 multiline
                 className="text-sm leading-relaxed text-[hsl(var(--muted-foreground))]"
@@ -60,14 +67,18 @@ export function BookingSection({ data, onChange, theme }: BookingSectionProps) {
                 <div>
                   <p className="font-semibold text-sm text-[hsl(var(--foreground))]">Clinic Address</p>
                   <EditableText
-                    value={data.address}
+                    value={data.address || ""}
                     onChange={(v) => updateField("address", v)}
+                    maxLength={80}
+                    fieldName="Clinic Address"
                     className="text-xs text-[hsl(var(--muted-foreground))]"
                   />
                   <span className="text-xs text-[hsl(var(--muted-foreground))]">, </span>
                   <EditableText
-                    value={data.cityState}
+                    value={data.cityState || ""}
                     onChange={(v) => updateField("cityState", v)}
+                    maxLength={50}
+                    fieldName="City, State"
                     className="text-xs text-[hsl(var(--muted-foreground))]"
                   />
                 </div>
@@ -83,8 +94,10 @@ export function BookingSection({ data, onChange, theme }: BookingSectionProps) {
                 <div>
                   <p className="font-semibold text-sm text-[hsl(var(--foreground))]">Direct Phone</p>
                   <EditableText
-                    value={data.phone}
+                    value={data.phone || ""}
                     onChange={(v) => updateField("phone", v)}
+                    maxLength={25}
+                    fieldName="Direct Phone"
                     className="font-mono-app text-xs text-[hsl(var(--muted-foreground))]"
                   />
                 </div>
@@ -100,8 +113,10 @@ export function BookingSection({ data, onChange, theme }: BookingSectionProps) {
                 <div>
                   <p className="font-semibold text-sm text-[hsl(var(--foreground))]">Email Inquiries</p>
                   <EditableText
-                    value={data.email}
+                    value={data.email || ""}
                     onChange={(v) => updateField("email", v)}
+                    maxLength={40}
+                    fieldName="Clinic Email"
                     className="text-xs text-[hsl(var(--muted-foreground))]"
                   />
                 </div>
@@ -114,6 +129,8 @@ export function BookingSection({ data, onChange, theme }: BookingSectionProps) {
             <EditableText
               value={data.formTitle}
               onChange={(v) => updateField("formTitle", v)}
+              maxLength={60}
+              fieldName="Form Title"
               tag="h3"
               className="font-display text-2xl mb-6 text-[hsl(var(--foreground))]"
             />

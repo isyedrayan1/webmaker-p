@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { LandingPageData } from "@/lib/builder-types";
 import { compileLandingPageToHtml, resolveButtonProps } from "@/lib/static-compiler";
 import { Laptop, Tablet, Smartphone } from "lucide-react";
+import { toast } from "sonner";
 
 export type BuilderMode = "edit" | "preview";
 export type PreviewDevice = "desktop" | "tablet" | "mobile";
@@ -13,6 +14,9 @@ interface BuilderCanvasProps {
   onChange: (updatedSite: LandingPageData) => void;
   mode: BuilderMode;
   previewDevice: PreviewDevice;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onTypingActive?: () => void;
 }
 
 const DEVICE_CONFIGS = {
@@ -25,7 +29,7 @@ const DEVICE_CONFIGS = {
   tablet: {
     width: 768,
     height: 1024,
-    label: "iPad Tablet",
+    label: "iPad / Tablet",
     resolution: "768 × 1024",
   },
   mobile: {
@@ -41,6 +45,8 @@ export function BuilderCanvas({
   onChange,
   mode,
   previewDevice,
+  onUndo,
+  onTypingActive,
 }: BuilderCanvasProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -83,8 +89,10 @@ export function BuilderCanvas({
 
   const compiledHtml = useMemo(() => {
     return compileLandingPageToHtml(site, isEditable);
+    // In edit mode we rely on direct DOM typing + structural updates.
+    // In preview mode we compile the full live site with all edited text content!
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [structuralKey]);
+  }, [mode === "preview" ? site : structuralKey, isEditable]);
 
   // Push instant live updates to iframe DOM via postMessage on SEO or button changes (0ms delay, ZERO reload!)
   useEffect(() => {
@@ -121,10 +129,65 @@ export function BuilderCanvas({
     }
   }, [site.seo, site.buttonConfigs, site]);
 
-  // Listen for bidirectional text edits from inside the iframe
+  // Listen for bidirectional text edits and guardrail events from inside the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === "CANVAS_TEXT_CHANGE") {
+      if (!event.data) return;
+
+      if (event.data.type === "CANVAS_LIMIT_EXCEEDED") {
+        const { maxLength, field } = event.data;
+        const fieldLabel = field ? field.split(".").pop() : "field";
+        toast.warning(`Character limit reached for ${fieldLabel} (${maxLength} chars max). Shorten text to preserve the design layout.`, {
+          id: `limit-toast-${field || "general"}`,
+          duration: 3500,
+          action: onUndo
+            ? {
+                label: "Undo",
+                onClick: () => onUndo(),
+              }
+            : undefined,
+        });
+        return;
+      }
+
+      if (event.data.type === "CANVAS_MAX_LINES_REACHED") {
+        const { maxLines, field } = event.data;
+        toast.warning(`Maximum length reached (${maxLines} lines max). Shorten text to preserve the design layout.`, {
+          id: `max-lines-toast-${field || "general"}`,
+          duration: 3500,
+          action: onUndo
+            ? {
+                label: "Undo",
+                onClick: () => onUndo(),
+              }
+            : undefined,
+        });
+        return;
+      }
+
+      if (event.data.type === "CANVAS_PASTE_TRIMMED") {
+        const { maxLength } = event.data;
+        toast.warning(`Pasted text was trimmed to ${maxLength} characters to fit layout guidelines.`, {
+          id: "paste-trimmed-toast",
+          duration: 3500,
+          action: onUndo
+            ? {
+                label: "Undo",
+                onClick: () => onUndo(),
+              }
+            : undefined,
+        });
+        return;
+      }
+
+      if (event.data.type === "CANVAS_TYPING_ACTIVE") {
+        if (onTypingActive) {
+          onTypingActive();
+        }
+        return;
+      }
+
+      if (event.data.type === "CANVAS_TEXT_CHANGE") {
         const { field, value } = event.data;
         if (!field) return;
 
@@ -162,7 +225,7 @@ export function BuilderCanvas({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [site, onChange]);
+  }, [site, onChange, onUndo, onTypingActive]);
 
   // 1. EDIT MODE: 100% Full-Bleed Fluid Canvas
   if (mode === "edit") {

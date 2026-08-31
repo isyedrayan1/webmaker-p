@@ -14,9 +14,10 @@ import {
   X,
 } from "lucide-react";
 import { LogoMark } from "./factory-ui";
+import { UserDropdown } from "./auth/UserDropdown";
 
 const navItems = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/websites", label: "Websites", icon: Globe2 },
   { href: "/templates", label: "Templates", icon: Boxes },
   { href: "/deployments", label: "Deployments", icon: Rocket },
@@ -77,10 +78,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="font-mono-app text-[11px]">All Systems Live</span>
               </div>
 
-              {/* User Avatar */}
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--primary))] font-display text-xs font-bold text-[hsl(var(--primary-foreground))] shadow-xs">
-                AR
-              </div>
+              {/* User Profile & Auth Dropdown */}
+              <UserDropdown />
 
               {/* Mobile Menu Toggle Button (< 768px) */}
               <button

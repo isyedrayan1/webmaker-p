@@ -1,8 +1,9 @@
 import {
   DEFAULT_CLINIC_DATA,
+  FIELD_GUARDRAIL_LIMITS,
+  FIELD_MAX_LINES,
   THEME_PALETTES,
   type BookingSectionData,
-  type ButtonActionConfig,
   type DoctorsSectionData,
   type FooterSectionData,
   type HeroSectionData,
@@ -106,36 +107,51 @@ function renderHero(
     site
   );
 
+  const showBadge = hero.showBadge !== false && (hero.badge || editAttr);
+  const showSecondary = hero.showSecondaryCta !== false && (hero.secondaryCta || editAttr);
+
   return `
   <!-- HERO SECTION -->
   <section id="hero" style="background: linear-gradient(180deg, var(--bg-light) 0%, rgba(255,255,255,0.7) 100%); border-bottom: 1px solid var(--border-light);">
     <div class="container">
-      <div class="grid-hero">
-        <div>
-          <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 9999px; background-color: rgba(0,0,0,0.04); border: 1px solid var(--border-light); font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-bottom: 1.5rem;">
+      <div class="grid-hero" style="align-items: start;">
+        <div style="min-width: 0; display: flex; flex-direction: column; align-items: flex-start;">
+          ${
+            showBadge
+              ? `<div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 9999px; background-color: rgba(0,0,0,0.04); border: 1px solid var(--border-light); font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-bottom: 1.25rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             ${ICONS.shield} <span ${editAttr} data-field="hero.badge">${escapeHtml(hero.badge || "Trusted Community Healthcare")}</span>
-          </div>
-          <h1 class="font-serif section-title" style="margin-bottom: 1.25rem;" ${editAttr} data-field="hero.headline">
+          </div>`
+              : ""
+          }
+          <h1 class="font-serif section-title" style="margin-bottom: 1.25rem; word-break: break-word; overflow-wrap: break-word;" ${editAttr} data-field="hero.headline">
             ${escapeHtml(hero.headline || "Comprehensive Care Close to Home.")}
           </h1>
-          <p class="section-desc" style="margin-bottom: 2rem;" ${editAttr} data-field="hero.subheadline">
+          <p class="section-desc" style="margin-bottom: 1.75rem; max-width: 65ch; white-space: pre-line; word-break: break-word; overflow-wrap: break-word;" ${editAttr} data-field="hero.subheadline">
             ${escapeHtml(hero.subheadline || "Compassionate, high-precision medical care backed by board-certified specialists.")}
           </p>
           <div class="hero-cta-group" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
             <a href="${primaryBtn.href}" ${primaryBtn.targetAttr} data-btn-id="hero.primaryCta" class="btn ${primaryBtn.variantClass}" style="padding: 0.9rem 2rem; font-size: 1rem;" ${editAttr} data-field="hero.primaryCta">${escapeHtml(primaryBtn.label)}</a>
-            <a href="${secondaryBtn.href}" ${secondaryBtn.targetAttr} data-btn-id="hero.secondaryCta" class="btn ${secondaryBtn.variantClass}" style="padding: 0.9rem 1.75rem;" ${editAttr} data-field="hero.secondaryCta">${escapeHtml(secondaryBtn.label)}</a>
+            ${
+              showSecondary
+                ? `<a href="${secondaryBtn.href}" ${secondaryBtn.targetAttr} data-btn-id="hero.secondaryCta" class="btn ${secondaryBtn.variantClass}" style="padding: 0.9rem 1.75rem;" ${editAttr} data-field="hero.secondaryCta">${escapeHtml(secondaryBtn.label)}</a>`
+                : ""
+            }
           </div>
-          <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono); display: flex; align-items: center; gap: 0.4rem;">
+          ${
+            hero.trustSnippet || editAttr
+              ? `<p style="margin-top: 1.25rem; font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono); display: flex; align-items: center; gap: 0.4rem;">
             ${ICONS.check} <span ${editAttr} data-field="hero.trustSnippet">${escapeHtml(hero.trustSnippet || "Accepting all major insurance providers · Same-day walk-ins welcome")}</span>
-          </p>
+          </p>`
+              : ""
+          }
         </div>
 
-        <div style="background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 2rem; padding: 2.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center;">
+        <div style="background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 2rem; padding: 2.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center; align-self: start; position: sticky; top: 5.5rem; width: 100%;">
           <div style="width: 70px; height: 70px; aspect-ratio: 1/1; background: rgba(0,0,0,0.04); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: var(--primary);">
             ${ICONS.stethoscope}
           </div>
           <h3 class="font-serif" style="font-size: 2rem; margin-bottom: 0.5rem;">Care When You Need It</h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Same-day urgent appointments, direct specialist consultations, and rapid testing.</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">Same-day urgent appointments, direct specialist consultations, and rapid testing.</p>
           <a href="${cardBtn.href}" ${cardBtn.targetAttr} data-btn-id="hero.cardCta" class="btn ${cardBtn.variantClass}" style="width: 100%;">${escapeHtml(cardBtn.label)}</a>
         </div>
       </div>
@@ -144,23 +160,25 @@ function renderHero(
 }
 
 function renderStats(stats: Partial<StatsSectionData>, editAttr: string): string {
+  const items = stats.items || [
+    { id: "1", value: "22+", label: "Years of Service", subtext: "Serving local families" },
+    { id: "2", value: "48", label: "Specialist Physicians", subtext: "Board-certified doctors" },
+    { id: "3", value: "99.4%", label: "Patient Satisfaction", subtext: "Verified surveys" },
+    { id: "4", value: "140K+", label: "Patients Treated", subtext: "Comprehensive care" },
+  ];
+
   return `
   <!-- STATS COUNTER -->
   <section id="stats" style="background-color: #ffffff; border-bottom: 1px solid var(--border-light); padding: 3.5rem 0;">
     <div class="container">
       <div class="grid-stats">
-        ${(stats.items || [
-          { id: "1", value: "22+", label: "Years of Service", subtext: "Serving local families" },
-          { id: "2", value: "48", label: "Specialist Physicians", subtext: "Board-certified doctors" },
-          { id: "3", value: "99.4%", label: "Patient Satisfaction", subtext: "Verified surveys" },
-          { id: "4", value: "140K+", label: "Patients Treated", subtext: "Comprehensive care" },
-        ])
+        ${items
           .map(
             (item, index) => `
-        <div style="text-align: center; padding: 0.5rem;">
-          <div class="font-serif" style="font-size: 2.75rem; color: var(--primary); font-weight: bold; line-height: 1;" ${editAttr} data-field="stats.items.${index}.value">${escapeHtml(item.value)}</div>
-          <div style="font-weight: 700; font-size: 0.95rem; margin-top: 0.5rem;" ${editAttr} data-field="stats.items.${index}.label">${escapeHtml(item.label)}</div>
-          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;" ${editAttr} data-field="stats.items.${index}.subtext">${escapeHtml(item.subtext)}</div>
+        <div style="text-align: center; padding: 0.5rem; min-width: 0;">
+          <div class="font-serif" style="font-size: 2.75rem; color: var(--primary); font-weight: bold; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums;" ${editAttr} data-field="stats.items.${index}.value">${escapeHtml(item.value)}</div>
+          <div style="font-weight: 700; font-size: 0.95rem; margin-top: 0.5rem; word-break: break-word;" ${editAttr} data-field="stats.items.${index}.label">${escapeHtml(item.label)}</div>
+          ${item.subtext || editAttr ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; word-break: break-word;" ${editAttr} data-field="stats.items.${index}.subtext">${escapeHtml(item.subtext)}</div>` : ""}
         </div>`
           )
           .join("")}
@@ -170,30 +188,32 @@ function renderStats(stats: Partial<StatsSectionData>, editAttr: string): string
 }
 
 function renderWhyUs(whyUs: Partial<WhyUsSectionData>, editAttr: string): string {
+  const pillars = whyUs.pillars || [
+    { id: "1", title: "Board-Certified Specialists", description: "Dedicated to evidence-based treatment plans." },
+    { id: "2", title: "Zero Long Waiting Times", description: "Streamlined check-in so you receive care promptly." },
+    { id: "3", title: "Advanced On-Site Lab", description: "Rapid testing and imaging results delivered within visit." },
+  ];
+
   return `
   <!-- WHY CHOOSE US -->
   <section id="why-us">
     <div class="container">
       <div style="text-align: center; margin-bottom: 3.5rem;">
-        <span class="section-eyebrow" ${editAttr} data-field="whyUs.eyebrow">${escapeHtml(whyUs.eyebrow || "Why Choose Us")}</span>
-        <h2 class="section-title" style="margin: 0.5rem auto 0 auto;" ${editAttr} data-field="whyUs.headline">${escapeHtml(whyUs.headline || "Patient-First Medicine with Clear, Transparent Care.")}</h2>
-        <p class="section-desc" style="margin: 1rem auto 0 auto;" ${editAttr} data-field="whyUs.description">${escapeHtml(whyUs.description || "We combine medical expertise with warmth and personal attention.")}</p>
+        ${whyUs.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="whyUs.eyebrow">${escapeHtml(whyUs.eyebrow || "Why Choose Us")}</span>` : ""}
+        <h2 class="section-title" style="margin: 0.5rem auto 0 auto; word-break: break-word;" ${editAttr} data-field="whyUs.headline">${escapeHtml(whyUs.headline || "Patient-First Medicine with Clear, Transparent Care.")}</h2>
+        ${whyUs.description || editAttr ? `<p class="section-desc" style="margin: 1rem auto 0 auto; max-width: 65ch; word-break: break-word;" ${editAttr} data-field="whyUs.description">${escapeHtml(whyUs.description || "We combine medical expertise with warmth and personal attention.")}</p>` : ""}
       </div>
 
       <div class="grid-whyus">
-        ${(whyUs.pillars || [
-          { id: "1", title: "Board-Certified Specialists", description: "Dedicated to evidence-based treatment plans." },
-          { id: "2", title: "Zero Long Waiting Times", description: "Streamlined check-in so you receive care promptly." },
-          { id: "3", title: "Advanced On-Site Lab", description: "Rapid testing and imaging results delivered within visit." },
-        ])
+        ${pillars
           .map(
             (pillar, index) => `
         <div class="card">
           <div class="icon-box" style="margin-bottom: 1.25rem;">
             ${ICONS.shield}
           </div>
-          <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem;" ${editAttr} data-field="whyUs.pillars.${index}.title">${escapeHtml(pillar.title)}</h3>
-          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;" ${editAttr} data-field="whyUs.pillars.${index}.description">${escapeHtml(pillar.description)}</p>
+          <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem; word-break: break-word;" ${editAttr} data-field="whyUs.pillars.${index}.title">${escapeHtml(pillar.title)}</h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; word-break: break-word;" ${editAttr} data-field="whyUs.pillars.${index}.description">${escapeHtml(pillar.description)}</p>
         </div>`
           )
           .join("")}
@@ -203,38 +223,44 @@ function renderWhyUs(whyUs: Partial<WhyUsSectionData>, editAttr: string): string
 }
 
 function renderServices(services: Partial<ServicesSectionData>, editAttr: string): string {
+  const serviceList = services.services || [
+    { id: "1", name: "Primary & Family Medicine", badge: "All Ages", description: "Routine physicals, vaccinations, and chronic care management.", highlights: ["Screenings", "Immunizations"] },
+    { id: "2", name: "Cardiovascular Care", badge: "Specialized", description: "Cardiac diagnostics, echocardiograms, and hypertension management.", highlights: ["ECG", "Echocardiogram"] },
+    { id: "3", name: "Orthopedics & Rehab", badge: "Rapid Recovery", description: "Joint preservation, fracture care, and physical rehabilitation.", highlights: ["Rehab", "Therapy"] },
+  ];
+
   return `
   <!-- SERVICES GRID -->
   <section id="services" style="background-color: #ffffff; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
     <div class="container">
       <div style="text-align: center; margin-bottom: 3.5rem;">
-        <span class="section-eyebrow" ${editAttr} data-field="services.eyebrow">${escapeHtml(services.eyebrow || "Clinical Departments")}</span>
-        <h2 class="section-title" style="margin: 0.5rem auto 0 auto;" ${editAttr} data-field="services.headline">${escapeHtml(services.headline || "Specialized Medical Services Under One Roof.")}</h2>
-        <p class="section-desc" style="margin: 1rem auto 0 auto;" ${editAttr} data-field="services.description">${escapeHtml(services.description || "From preventive family wellness to specialized interventions.")}</p>
+        ${services.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="services.eyebrow">${escapeHtml(services.eyebrow || "Clinical Departments")}</span>` : ""}
+        <h2 class="section-title" style="margin: 0.5rem auto 0 auto; word-break: break-word;" ${editAttr} data-field="services.headline">${escapeHtml(services.headline || "Specialized Medical Services Under One Roof.")}</h2>
+        ${services.description || editAttr ? `<p class="section-desc" style="margin: 1rem auto 0 auto; max-width: 65ch; word-break: break-word;" ${editAttr} data-field="services.description">${escapeHtml(services.description || "From preventive family wellness to specialized interventions.")}</p>` : ""}
       </div>
 
       <div class="grid-services">
-        ${(services.services || [
-          { id: "1", name: "Primary & Family Medicine", badge: "All Ages", description: "Routine physicals, vaccinations, and chronic care management.", highlights: ["Screenings", "Immunizations"] },
-          { id: "2", name: "Cardiovascular Care", badge: "Specialized", description: "Cardiac diagnostics, echocardiograms, and hypertension management.", highlights: ["ECG", "Echocardiogram"] },
-          { id: "3", name: "Orthopedics & Rehab", badge: "Rapid Recovery", description: "Joint preservation, fracture care, and physical rehabilitation.", highlights: ["Rehab", "Therapy"] },
-        ])
+        ${serviceList
           .map(
             (srv, index) => `
-        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; min-width: 0;">
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 0.5rem;">
               <div class="icon-box">${ICONS.activity}</div>
-              <span style="font-size: 0.7rem; font-family: var(--font-mono); text-transform: uppercase; background: var(--bg-light); padding: 0.25rem 0.6rem; border-radius: 9999px; font-weight: 600;" ${editAttr} data-field="services.services.${index}.badge">${escapeHtml(srv.badge)}</span>
+              ${srv.badge || editAttr ? `<span style="font-size: 0.7rem; font-family: var(--font-mono); text-transform: uppercase; background: var(--bg-light); padding: 0.25rem 0.6rem; border-radius: 9999px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" ${editAttr} data-field="services.services.${index}.badge">${escapeHtml(srv.badge)}</span>` : ""}
             </div>
-            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;" ${editAttr} data-field="services.services.${index}.name">${escapeHtml(srv.name)}</h3>
-            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;" ${editAttr} data-field="services.services.${index}.description">${escapeHtml(srv.description)}</p>
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; word-break: break-word;" ${editAttr} data-field="services.services.${index}.name">${escapeHtml(srv.name)}</h3>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5; word-break: break-word;" ${editAttr} data-field="services.services.${index}.description">${escapeHtml(srv.description)}</p>
           </div>
-          <div style="border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem;">
-            ${(srv.highlights || [])
-              .map((h) => `<span style="font-size: 0.75rem; background: var(--bg-light); padding: 0.2rem 0.5rem; border-radius: 6px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.25rem;">${ICONS.check} ${escapeHtml(h)}</span>`)
+          ${
+            srv.highlights && srv.highlights.length > 0
+              ? `<div style="border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto; display: flex; flex-wrap: wrap; gap: 0.4rem;">
+            ${srv.highlights
+              .map((h) => `<span style="font-size: 0.75rem; background: var(--bg-light); padding: 0.2rem 0.5rem; border-radius: 6px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.25rem; word-break: break-word;">${ICONS.check} ${escapeHtml(h)}</span>`)
               .join("")}
-          </div>
+          </div>`
+              : ""
+          }
         </div>`
           )
           .join("")}
@@ -244,32 +270,38 @@ function renderServices(services: Partial<ServicesSectionData>, editAttr: string
 }
 
 function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string): string {
+  const doctorList = doctors.doctors || [
+    { id: "1", name: "Dr. Eleanor Vance, MD", role: "Chief of Cardiology", credentials: "Harvard Medical · FACC", experience: "16+ Years Experience" },
+    { id: "2", name: "Dr. Marcus Thorne, MD", role: "Lead Orthopedic Surgeon", credentials: "Johns Hopkins · FAAOS", experience: "14+ Years Experience" },
+    { id: "3", name: "Dr. Maya Patel, MD", role: "Director of Pediatrics", credentials: "Stanford Medicine · FAAP", experience: "12+ Years Experience" },
+  ];
+
   return `
   <!-- DOCTOR ROSTER -->
   <section id="doctors">
     <div class="container">
       <div style="text-align: center; margin-bottom: 3.5rem;">
-        <span class="section-eyebrow" ${editAttr} data-field="doctors.eyebrow">${escapeHtml(doctors.eyebrow || "Medical Leadership")}</span>
-        <h2 class="section-title" style="margin: 0.5rem auto 0 auto;" ${editAttr} data-field="doctors.headline">${escapeHtml(doctors.headline || "Meet Our Dedicated Specialists.")}</h2>
-        <p class="section-desc" style="margin: 1rem auto 0 auto;" ${editAttr} data-field="doctors.description">${escapeHtml(doctors.description || "Experienced physicians who treat you with warmth and respect.")}</p>
+        ${doctors.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="doctors.eyebrow">${escapeHtml(doctors.eyebrow || "Medical Leadership")}</span>` : ""}
+        <h2 class="section-title" style="margin: 0.5rem auto 0 auto; word-break: break-word;" ${editAttr} data-field="doctors.headline">${escapeHtml(doctors.headline || "Meet Our Dedicated Specialists.")}</h2>
+        ${doctors.description || editAttr ? `<p class="section-desc" style="margin: 1rem auto 0 auto; max-width: 65ch; word-break: break-word;" ${editAttr} data-field="doctors.description">${escapeHtml(doctors.description || "Experienced physicians who treat you with warmth and respect.")}</p>` : ""}
       </div>
 
       <div class="grid-doctors">
-        ${(doctors.doctors || [
-          { id: "1", name: "Dr. Eleanor Vance, MD", role: "Chief of Cardiology", credentials: "Harvard Medical · FACC", experience: "16+ Years Experience" },
-          { id: "2", name: "Dr. Marcus Thorne, MD", role: "Lead Orthopedic Surgeon", credentials: "Johns Hopkins · FAAOS", experience: "14+ Years Experience" },
-          { id: "3", name: "Dr. Maya Patel, MD", role: "Director of Pediatrics", credentials: "Stanford Medicine · FAAP", experience: "12+ Years Experience" },
-        ])
+        ${doctorList
           .map(
             (doc, index) => `
-        <div class="card" style="text-align: center;">
-          <div class="card-doctor-avatar">
-            ${escapeHtml((doc.name || "D").replace("Dr. ", "").slice(0, 1))}
+        <div class="card" style="text-align: center; display: flex; flex-direction: column; justify-content: space-between; min-width: 0;">
+          <div style="flex: 1;">
+            ${
+              doc.imageUrl
+                ? `<img src="${escapeHtml(doc.imageUrl)}" alt="${escapeHtml(doc.name)}" class="card-doctor-avatar" style="object-fit: cover;" />`
+                : `<div class="card-doctor-avatar">${escapeHtml((doc.name || "D").replace("Dr. ", "").slice(0, 1))}</div>`
+            }
+            <h3 style="font-size: 1.25rem; font-weight: 700; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.name">${escapeHtml(doc.name)}</h3>
+            <p style="color: var(--primary); font-weight: 600; font-size: 0.85rem; margin-top: 0.25rem; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.role">${escapeHtml(doc.role)}</p>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.credentials">${escapeHtml(doc.credentials)}</p>
           </div>
-          <h3 style="font-size: 1.25rem; font-weight: 700;" ${editAttr} data-field="doctors.doctors.${index}.name">${escapeHtml(doc.name)}</h3>
-          <p style="color: var(--primary); font-weight: 600; font-size: 0.85rem; margin-top: 0.25rem;" ${editAttr} data-field="doctors.doctors.${index}.role">${escapeHtml(doc.role)}</p>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;" ${editAttr} data-field="doctors.doctors.${index}.credentials">${escapeHtml(doc.credentials)}</p>
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-light); font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted);">
+          <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-light); font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted); word-break: break-word;">
             ${escapeHtml(doc.experience)}
           </div>
         </div>`
@@ -281,36 +313,43 @@ function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string): 
 }
 
 function renderReviews(reviews: Partial<ReviewsSectionData>, editAttr: string): string {
+  const showSummary = reviews.showRatingSummary !== false && (reviews.ratingAverage || editAttr);
+  const reviewList = reviews.reviews || [
+    { id: "1", quote: "Dr. Vance took time to explain everything clearly. Exceptional clinic experience.", patientName: "Robert C.", treatment: "Cardiology Patient" },
+    { id: "2", quote: "Our whole family visits here. The staff is gentle and thorough.", patientName: "Sarah M.", treatment: "Family Medicine" },
+    { id: "3", quote: "Had me back on my feet in 8 weeks after a sports injury. Modern and clean facility.", patientName: "David L.", treatment: "Orthopedics" },
+  ];
+
   return `
   <!-- PATIENT REVIEWS -->
   <section id="reviews" style="background-color: #ffffff; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
     <div class="container">
       <div style="text-align: center; margin-bottom: 3.5rem;">
-        <span class="section-eyebrow" ${editAttr} data-field="reviews.eyebrow">${escapeHtml(reviews.eyebrow || "Patient Feedback")}</span>
-        <h2 class="section-title" style="margin: 0.5rem auto 0 auto;" ${editAttr} data-field="reviews.headline">${escapeHtml(reviews.headline || "Real Stories from Patients We've Cared For.")}</h2>
-        <div style="margin-top: 0.75rem; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--primary);">
+        ${reviews.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="reviews.eyebrow">${escapeHtml(reviews.eyebrow || "Patient Feedback")}</span>` : ""}
+        <h2 class="section-title" style="margin: 0.5rem auto 0 auto; word-break: break-word;" ${editAttr} data-field="reviews.headline">${escapeHtml(reviews.headline || "Real Stories from Patients We've Cared For.")}</h2>
+        ${
+          showSummary
+            ? `<div style="margin-top: 0.75rem; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--primary); flex-wrap: wrap; justify-content: center;">
           <span>${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star}</span>
           <span ${editAttr} data-field="reviews.ratingAverage">${escapeHtml(reviews.ratingAverage || "4.9")}</span>
           <span>/ 5.0 (</span><span ${editAttr} data-field="reviews.totalReviews">${escapeHtml(reviews.totalReviews || "1,200+")}</span> <span>Verified Reviews)</span>
-        </div>
+        </div>`
+            : ""
+        }
       </div>
 
       <div class="grid-reviews">
-        ${(reviews.reviews || [
-          { id: "1", quote: "Dr. Vance took time to explain everything clearly. Exceptional clinic experience.", patientName: "Robert C.", treatment: "Cardiology Patient" },
-          { id: "2", quote: "Our whole family visits here. The staff is gentle and thorough.", patientName: "Sarah M.", treatment: "Family Medicine" },
-          { id: "3", quote: "Had me back on my feet in 8 weeks after a sports injury. Modern and clean facility.", patientName: "David L.", treatment: "Orthopedics" },
-        ])
+        ${reviewList
           .map(
             (rev, index) => `
-        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; min-width: 0;">
+          <div style="flex: 1;">
             <div style="display: flex; gap: 2px; margin-bottom: 0.75rem;">${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star}</div>
-            <p style="font-style: italic; color: var(--text-dark); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;" ${editAttr} data-field="reviews.reviews.${index}.quote">"${escapeHtml(rev.quote)}"</p>
+            <p style="font-style: italic; color: var(--text-dark); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; word-break: break-word;" ${editAttr} data-field="reviews.reviews.${index}.quote">"${escapeHtml(rev.quote)}"</p>
           </div>
-          <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
-            <strong ${editAttr} data-field="reviews.reviews.${index}.patientName">${escapeHtml(rev.patientName)}</strong>
-            <span ${editAttr} data-field="reviews.reviews.${index}.treatment">${escapeHtml(rev.treatment)}</span>
+          <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; margin-top: auto; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); gap: 0.5rem;">
+            <strong style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="reviews.reviews.${index}.patientName">${escapeHtml(rev.patientName)}</strong>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;" ${editAttr} data-field="reviews.reviews.${index}.treatment">${escapeHtml(rev.treatment)}</span>
           </div>
         </div>`
           )
@@ -321,24 +360,30 @@ function renderReviews(reviews: Partial<ReviewsSectionData>, editAttr: string): 
 }
 
 function renderHours(hours: Partial<HoursSectionData>, editAttr: string): string {
+  const showEmergency = hours.showEmergencyNotice !== false && (hours.emergencyHotline || editAttr);
+
   return `
   <!-- HOURS & EMERGENCY -->
   <section id="hours">
     <div class="container">
       <div class="grid-hours">
-        <div>
-          <span class="section-eyebrow" ${editAttr} data-field="hours.eyebrow">${escapeHtml(hours.eyebrow || "Clinic Schedule")}</span>
-          <h2 class="section-title" ${editAttr} data-field="hours.headline">${escapeHtml(hours.headline || "Operating Hours & Emergency Triage.")}</h2>
-          <p class="section-desc" ${editAttr} data-field="hours.description">${escapeHtml(hours.description || "Convenient morning, evening, and weekend hours.")}</p>
+        <div style="min-width: 0;">
+          ${hours.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="hours.eyebrow">${escapeHtml(hours.eyebrow || "Clinic Schedule")}</span>` : ""}
+          <h2 class="section-title" style="word-break: break-word;" ${editAttr} data-field="hours.headline">${escapeHtml(hours.headline || "Operating Hours & Emergency Triage.")}</h2>
+          ${hours.description || editAttr ? `<p class="section-desc" style="max-width: 65ch; word-break: break-word;" ${editAttr} data-field="hours.description">${escapeHtml(hours.description || "Convenient morning, evening, and weekend hours.")}</p>` : ""}
 
-          <div style="margin-top: 2rem; background: rgba(0,0,0,0.03); border-left: 4px solid var(--primary); padding: 1.25rem; border-radius: 0.5rem;">
+          ${
+            showEmergency
+              ? `<div style="margin-top: 2rem; background: rgba(0,0,0,0.03); border-left: 4px solid var(--primary); padding: 1.25rem; border-radius: 0.5rem;">
             <p style="font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 0.4rem;">${ICONS.alert} 24/7 Emergency Assistance</p>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;" ${editAttr} data-field="hours.emergencyNotice">${escapeHtml(hours.emergencyNotice || "Urgent care & triage available 24/7.")}</p>
-            <a href="tel:${hours.emergencyHotline || "+1 (800) 427-2673"}" style="display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; font-weight: bold; color: var(--primary); text-decoration: none;">${ICONS.phone} Hotline: <span ${editAttr} data-field="hours.emergencyHotline">${escapeHtml(hours.emergencyHotline || "+1 (800) 427-2673")}</span></a>
-          </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; word-break: break-word;" ${editAttr} data-field="hours.emergencyNotice">${escapeHtml(hours.emergencyNotice || "Urgent care & triage available 24/7.")}</p>
+            <a href="tel:${hours.emergencyHotline || "+1 (800) 427-2673"}" style="display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; font-weight: bold; color: var(--primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ICONS.phone} Hotline: <span ${editAttr} data-field="hours.emergencyHotline">${escapeHtml(hours.emergencyHotline || "+1 (800) 427-2673")}</span></a>
+          </div>`
+              : ""
+          }
         </div>
 
-        <div class="card">
+        <div class="card" style="min-width: 0;">
           <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">Regular Operating Hours</h3>
           <div style="display: flex; flex-direction: column; gap: 0.75rem;">
             ${(hours.schedule || [
@@ -348,9 +393,9 @@ function renderHours(hours: Partial<HoursSectionData>, editAttr: string): string
             ])
               .map(
                 (item, index) => `
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-light); padding-bottom: 0.5rem; font-size: 0.9rem;">
-              <span style="font-weight: 600;" ${editAttr} data-field="hours.schedule.${index}.day">${escapeHtml(item.day)}</span>
-              <span style="color: var(--text-muted); font-family: var(--font-mono);" ${editAttr} data-field="hours.schedule.${index}.hours">${escapeHtml(item.hours)}</span>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-light); padding-bottom: 0.5rem; font-size: 0.9rem; gap: 1rem;">
+              <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="hours.schedule.${index}.day">${escapeHtml(item.day)}</span>
+              <span style="color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;" ${editAttr} data-field="hours.schedule.${index}.hours">${escapeHtml(item.hours)}</span>
             </div>`
               )
               .join("")}
@@ -379,44 +424,56 @@ function renderBooking(
   <section id="booking" style="background-color: #ffffff; border-top: 1px solid var(--border-light);">
     <div class="container">
       <div class="grid-booking">
-        <div>
-          <span class="section-eyebrow" ${editAttr} data-field="booking.eyebrow">${escapeHtml(booking.eyebrow || "Get in Touch")}</span>
-          <h2 class="section-title" ${editAttr} data-field="booking.headline">${escapeHtml(booking.headline || "Schedule Your Appointment Today.")}</h2>
-          <p class="section-desc" ${editAttr} data-field="booking.description">${escapeHtml(booking.description || "Fill out the form below or call us directly.")}</p>
+        <div style="min-width: 0;">
+          ${booking.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="booking.eyebrow">${escapeHtml(booking.eyebrow || "Get in Touch")}</span>` : ""}
+          <h2 class="section-title" style="word-break: break-word;" ${editAttr} data-field="booking.headline">${escapeHtml(booking.headline || "Schedule Your Appointment Today.")}</h2>
+          ${booking.description || editAttr ? `<p class="section-desc" style="max-width: 65ch; word-break: break-word;" ${editAttr} data-field="booking.description">${escapeHtml(booking.description || "Fill out the form below or call us directly.")}</p>` : ""}
 
           <div style="margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
-            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+            ${
+              booking.address || editAttr
+                ? `<div style="display: flex; gap: 1rem; align-items: flex-start;">
               <div class="icon-box">${ICONS.mapPin}</div>
-              <div>
+              <div style="min-width: 0;">
                 <strong>Clinic Address</strong>
-                <p style="font-size: 0.9rem; color: var(--text-muted);"><span ${editAttr} data-field="booking.address">${escapeHtml(booking.address || "742 Evergreen Parkway")}</span>, <span ${editAttr} data-field="booking.cityState">${escapeHtml(booking.cityState || "Seattle, WA")}</span></p>
+                <p style="font-size: 0.9rem; color: var(--text-muted); word-break: break-word;"><span ${editAttr} data-field="booking.address">${escapeHtml(booking.address || "742 Evergreen Parkway")}</span>, <span ${editAttr} data-field="booking.cityState">${escapeHtml(booking.cityState || "Seattle, WA")}</span></p>
               </div>
-            </div>
-            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+            </div>`
+                : ""
+            }
+            ${
+              booking.phone || editAttr
+                ? `<div style="display: flex; gap: 1rem; align-items: flex-start;">
               <div class="icon-box">${ICONS.phone}</div>
-              <div>
+              <div style="min-width: 0;">
                 <strong>Direct Phone</strong>
-                <p style="font-size: 0.9rem; color: var(--text-muted);" ${editAttr} data-field="booking.phone">${escapeHtml(booking.phone || "+1 (206) 555-0198")}</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted); word-break: break-word;" ${editAttr} data-field="booking.phone">${escapeHtml(booking.phone || "+1 (206) 555-0198")}</p>
               </div>
-            </div>
-            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+            </div>`
+                : ""
+            }
+            ${
+              booking.email || editAttr
+                ? `<div style="display: flex; gap: 1rem; align-items: flex-start;">
               <div class="icon-box">${ICONS.mail}</div>
-              <div>
+              <div style="min-width: 0;">
                 <strong>Email Inquiries</strong>
-                <p style="font-size: 0.9rem; color: var(--text-muted);" ${editAttr} data-field="booking.email">${escapeHtml(booking.email || "care@clinic.org")}</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted); word-break: break-word;" ${editAttr} data-field="booking.email">${escapeHtml(booking.email || "care@clinic.org")}</p>
               </div>
-            </div>
+            </div>`
+                : ""
+            }
           </div>
         </div>
 
-        <div class="card" style="background-color: var(--bg-light);">
+        <div class="card" style="background-color: var(--bg-light); min-width: 0;">
           <h3 class="font-serif" style="font-size: 1.75rem; margin-bottom: 1.25rem;" ${editAttr} data-field="booking.formTitle">${escapeHtml(booking.formTitle || "Request an Appointment")}</h3>
           <form id="appointmentForm" onsubmit="event.preventDefault(); alert('Thank you! Your appointment request has been received.'); this.reset();">
             <div style="margin-bottom: 1rem;">
               <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Patient Full Name</label>
               <input required type="text" placeholder="e.g. Jane Doe" style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem;">
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
               <div>
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Phone Number</label>
                 <input required type="tel" placeholder="(555) 000-0000" style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-light); font-family: inherit; font-size: 0.9rem;">
@@ -446,36 +503,34 @@ function renderFooter(footer: Partial<FooterSectionData>, editAttr: string, defa
   <footer id="footer" style="background-color: var(--bg-dark); color: #ffffff; padding: 4rem 0 2rem 0;">
     <div class="container">
       <div class="grid-footer">
-        <div>
-          <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;" ${editAttr} data-field="footer.hospitalName">${escapeHtml(footer.hospitalName || defaultName)}</h3>
-          <p style="font-size: 0.85rem; color: rgba(255,255,255,0.7); line-height: 1.6;" ${editAttr} data-field="footer.description">${escapeHtml(footer.description || "Dedicated community healthcare providing patient-first medical excellence.")}</p>
-          <p style="margin-top: 1rem; font-size: 0.75rem; color: var(--accent); font-family: var(--font-mono); display: flex; align-items: center; gap: 0.35rem;">${ICONS.check} <span ${editAttr} data-field="footer.accreditationBadge">${escapeHtml(footer.accreditationBadge || "JCAHO Accredited · State Certified")}</span></p>
+        <div style="min-width: 0;">
+          <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; word-break: break-word;" ${editAttr} data-field="footer.hospitalName">${escapeHtml(footer.hospitalName || defaultName)}</h3>
+          ${footer.description || editAttr ? `<p style="font-size: 0.85rem; color: rgba(255,255,255,0.7); line-height: 1.6; word-break: break-word;" ${editAttr} data-field="footer.description">${escapeHtml(footer.description || "Dedicated community healthcare providing patient-first medical excellence.")}</p>` : ""}
+          ${footer.accreditationBadge || editAttr ? `<p style="margin-top: 1rem; font-size: 0.75rem; color: var(--accent); font-family: var(--font-mono); display: flex; align-items: center; gap: 0.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ICONS.check} <span ${editAttr} data-field="footer.accreditationBadge">${escapeHtml(footer.accreditationBadge || "JCAHO Accredited · State Certified")}</span></p>` : ""}
         </div>
-        <div>
+        ${
+          footer.quickLinks && footer.quickLinks.length > 0
+            ? `<div style="min-width: 0;">
           <h4 style="font-size: 0.9rem; font-family: var(--font-mono); text-transform: uppercase; margin-bottom: 1rem; color: rgba(255,255,255,0.5);">Quick Links</h4>
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            ${(footer.quickLinks || [
-              { label: "Specialties", href: "#services" },
-              { label: "Physicians", href: "#doctors" },
-              { label: "Patient Reviews", href: "#reviews" },
-              { label: "Clinic Hours", href: "#hours" },
-              { label: "Appointment Booking", href: "#booking" },
-            ])
-              .map((link) => `<a href="${link.href}" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem;">${escapeHtml(link.label)}</a>`)
+            ${footer.quickLinks
+              .map((link) => `<a href="${link.href}" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(link.label)}</a>`)
               .join("")}
           </div>
-        </div>
-        <div>
+        </div>`
+            : ""
+        }
+        <div style="min-width: 0;">
           <h4 style="font-size: 0.9rem; font-family: var(--font-mono); text-transform: uppercase; margin-bottom: 1rem; color: rgba(255,255,255,0.5);">Direct Contact</h4>
-          <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">${ICONS.mapPin} <span ${editAttr} data-field="footer.address">${escapeHtml(footer.address || "742 Evergreen Parkway, Seattle, WA")}</span></p>
-          <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">${ICONS.phone} <span ${editAttr} data-field="footer.phone">${escapeHtml(footer.phone || "+1 (206) 555-0198")}</span></p>
-          <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 0.4rem;">${ICONS.mail} <span ${editAttr} data-field="footer.email">${escapeHtml(footer.email || "care@clinic.org")}</span></p>
+          ${footer.address || editAttr ? `<p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ICONS.mapPin} <span ${editAttr} data-field="footer.address">${escapeHtml(footer.address || "742 Evergreen Parkway, Seattle, WA")}</span></p>` : ""}
+          ${footer.phone || editAttr ? `<p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ICONS.phone} <span ${editAttr} data-field="footer.phone">${escapeHtml(footer.phone || "+1 (206) 555-0198")}</span></p>` : ""}
+          ${footer.email || editAttr ? `<p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ICONS.mail} <span ${editAttr} data-field="footer.email">${escapeHtml(footer.email || "care@clinic.org")}</span></p>` : ""}
         </div>
       </div>
 
-      <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem; display: flex; flex-direction: column; gap: 1rem; font-size: 0.75rem; color: rgba(255,255,255,0.5);">
-        <p ${editAttr} data-field="footer.medicalDisclaimer">${escapeHtml(footer.medicalDisclaimer || "Medical Disclaimer: The medical information on this site is provided as an information resource only.")}</p>
-        <p ${editAttr} data-field="footer.copyrightText">${escapeHtml(footer.copyrightText || `© 2026 ${defaultName}. All rights reserved.`)}</p>
+      <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; font-size: 0.75rem; color: rgba(255,255,255,0.5);">
+        <p style="max-width: 65ch; word-break: break-word;" ${editAttr} data-field="footer.medicalDisclaimer">${escapeHtml(footer.medicalDisclaimer || "Medical Disclaimer: The medical information on this site is provided as an information resource only.")}</p>
+        <p style="white-space: nowrap;" ${editAttr} data-field="footer.copyrightText">${escapeHtml(footer.copyrightText || `© 2026 ${defaultName}. All rights reserved.`)}</p>
       </div>
     </div>
   </footer>`;
@@ -539,7 +594,7 @@ export function compileLandingPageToHtml(
   const pageTitle = safeSite.seo?.title || `${safeSite.name || "Care Clinic"} | Healthcare Excellence`;
   const pageDescription = safeSite.seo?.description || hero.subheadline || safeSite.name || "Medical Center";
 
-  return `<!DOCTYPE html>
+  let outputHtml = `<!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
@@ -636,22 +691,22 @@ export function compileLandingPageToHtml(
     section { padding: 5rem 0; }
     .section-eyebrow { font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--primary); font-weight: 600; }
     .section-title { font-family: var(--font-serif); font-size: 2.85rem; line-height: 1.12; margin-top: 0.5rem; color: var(--text-dark); }
-    .section-desc { color: var(--text-muted); max-width: 650px; margin-top: 0.75rem; font-size: 1.05rem; }
+    .section-desc { color: var(--text-muted); max-width: 650px; margin-top: 0.75rem; font-size: 1.05rem; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; }
 
-    /* Desktop Grids (Zero Layout Shift) */
-    .grid-hero { display: grid; grid-template-columns: 1.3fr 0.9fr; gap: 3.5rem; align-items: center; }
-    .grid-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
-    .grid-whyus { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-    .grid-services { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; }
-    .grid-doctors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-    .grid-reviews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-    .grid-hours { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3rem; align-items: center; }
-    .grid-booking { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
-    .grid-footer { display: grid; grid-template-columns: 1.5fr 1fr 1.2fr; gap: 3rem; margin-bottom: 3rem; }
+    /* Desktop Grids (Defensive Auto-Fit Layouts) */
+    .grid-hero { display: grid; grid-template-columns: 1.3fr 0.9fr; gap: 3.5rem; align-items: start; }
+    .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1.5rem; }
+    .grid-whyus { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; }
+    .grid-services { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.75rem; }
+    .grid-doctors { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 2rem; }
+    .grid-reviews { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; }
+    .grid-hours { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3rem; align-items: start; }
+    .grid-booking { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
+    .grid-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 3rem; margin-bottom: 3rem; }
 
-    /* Cards */
-    .card { background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 1.25rem; padding: 2rem; }
-    .card-doctor-avatar { width: 80px; height: 80px; aspect-ratio: 1/1; border-radius: 50%; background-color: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-family: var(--font-serif); margin: 0 auto 1.25rem auto; flex-shrink: 0; }
+    /* Cards & Defensive UI Primitives */
+    .card { background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 1.25rem; padding: 2rem; min-width: 0; word-break: break-word; overflow-wrap: break-word; }
+    .card-doctor-avatar { width: 80px; height: 80px; aspect-ratio: 1/1; border-radius: 50%; background-color: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-family: var(--font-serif); margin: 0 auto 1.25rem auto; flex-shrink: 0; object-fit: cover; }
     .icon-box { width: 44px; height: 44px; aspect-ratio: 1/1; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background-color: var(--bg-light); border: 1px solid var(--border-light); color: var(--primary); flex-shrink: 0; }
 
     .mobile-menu-btn { display: none; }
@@ -659,14 +714,8 @@ export function compileLandingPageToHtml(
     /* Tablet (768px - 1023px) */
     @media (max-width: 1023px) {
       .grid-hero { grid-template-columns: 1fr; gap: 2.5rem; }
-      .grid-stats { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
-      .grid-whyus { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
-      .grid-services { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
-      .grid-doctors { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
-      .grid-reviews { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
       .grid-hours { grid-template-columns: 1fr; gap: 2rem; }
       .grid-booking { grid-template-columns: 1fr; gap: 2rem; }
-      .grid-footer { grid-template-columns: 1fr 1fr; gap: 2rem; }
       .section-title { font-size: 2.4rem; }
     }
 
@@ -688,14 +737,8 @@ export function compileLandingPageToHtml(
       .section-title { font-size: 2.1rem; }
       
       .grid-hero { grid-template-columns: 1fr; }
-      .grid-stats { grid-template-columns: 1fr 1fr; gap: 1rem; }
-      .grid-whyus { grid-template-columns: 1fr; gap: 1.25rem; }
-      .grid-services { grid-template-columns: 1fr; gap: 1.25rem; }
-      .grid-doctors { grid-template-columns: 1fr; gap: 1.25rem; }
-      .grid-reviews { grid-template-columns: 1fr; gap: 1.25rem; }
       .grid-hours { grid-template-columns: 1fr; gap: 1.5rem; }
       .grid-booking { grid-template-columns: 1fr; gap: 2rem; }
-      .grid-footer { grid-template-columns: 1fr; gap: 2rem; }
 
       .btn { width: 100%; }
       .hero-cta-group { flex-direction: column; width: 100%; }
@@ -705,12 +748,19 @@ export function compileLandingPageToHtml(
     ${
       isEditable
         ? `
-      /* Studio Editor Subtle Focus Ring */
+      /* Studio Editor Clean Natural Box (Zero Internal Scrollbars) */
       [contenteditable="true"] {
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden !important;
+        overflow-y: hidden !important;
+        resize: none !important;
         outline: 1px dashed rgba(40, 84, 89, 0.25);
         outline-offset: 2px;
         transition: outline 0.15s ease, background-color 0.15s ease;
-        border-radius: 3px;
+        border-radius: 4px;
+        word-break: break-word;
+        overflow-wrap: break-word;
       }
       [contenteditable="true"]:hover {
         outline: 1px solid var(--primary);
@@ -719,8 +769,29 @@ export function compileLandingPageToHtml(
       [contenteditable="true"]:focus {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
-        border-radius: 4px;
-        background-color: rgba(40, 84, 89, 0.08);
+        background-color: rgba(40, 84, 89, 0.06);
+      }
+
+      /* Specific Slot Bounds: Auto-height capped with overflow-hidden (Zero Scrollbars) */
+      .section-title[contenteditable="true"] {
+        display: block;
+        max-height: 140px;
+        overflow: hidden !important;
+      }
+      .section-desc[contenteditable="true"] {
+        display: block;
+        max-height: 160px;
+        overflow: hidden !important;
+      }
+      .brand-title[contenteditable="true"], .brand-tagline[contenteditable="true"] {
+        max-height: 38px;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+      }
+      .btn[contenteditable="true"] {
+        max-height: 50px;
+        overflow: hidden !important;
+        white-space: nowrap !important;
       }
     `
         : ""
@@ -732,13 +803,17 @@ export function compileLandingPageToHtml(
   ${
     navbarBlock
       ? `
-  <!-- TOP BAR -->
+  ${
+    navbar.showEmergencyTopBar !== false && (navbar.emergencyPhone || editAttr)
+      ? `<!-- TOP BAR -->
   <div class="topbar">
-    <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
-      <span style="display: inline-flex; align-items: center; gap: 0.4rem;">${ICONS.hospital} <strong>Emergency Triage Open 24/7</strong></span>
-      ${navbar.emergencyPhone ? `<a href="tel:${navbar.emergencyPhone}" style="color: #ffffff; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">${ICONS.phone} Hotline: <span ${editAttr} data-field="navbar.emergencyPhone">${escapeHtml(navbar.emergencyPhone)}</span></a>` : ""}
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <span style="display: inline-flex; align-items: center; gap: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ICONS.hospital} <strong>Emergency Triage Open 24/7</strong></span>
+      ${navbar.emergencyPhone || editAttr ? `<a href="tel:${navbar.emergencyPhone || "1-800-HOTLINE"}" style="color: #ffffff; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;">${ICONS.phone} Hotline: <span ${editAttr} data-field="navbar.emergencyPhone">${escapeHtml(navbar.emergencyPhone || "1-800-HOTLINE")}</span></a>` : ""}
     </div>
-  </div>
+  </div>`
+      : ""
+  }
 
   <!-- NAVBAR -->
   <header class="navbar">
@@ -746,19 +821,29 @@ export function compileLandingPageToHtml(
       <div class="navbar-inner">
         <!-- Clinic Brand: Non-navigating element -->
         <div class="navbar-brand">
-          <div class="brand-logo">+</div>
+          ${
+            navbar.logoType === "image" && navbar.logoUrl
+              ? `<img src="${escapeHtml(navbar.logoUrl)}" alt="${escapeHtml(navbar.hospitalName || safeSite.name)}" style="height: 38px; width: auto; max-width: 160px; object-fit: contain; flex-shrink: 0;" />`
+              : navbar.logoType === "text_only"
+              ? ""
+              : `<div class="brand-logo">+</div>`
+          }
           <div style="min-width: 0;">
-            <span class="brand-title" ${editAttr} data-field="navbar.hospitalName">${escapeHtml(navbar.hospitalName || safeSite.name)}</span>
-            <span class="brand-tagline" ${editAttr} data-field="navbar.tagline">${escapeHtml(navbar.tagline || "Medical Center")}</span>
+            <span class="brand-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="navbar.hospitalName">${escapeHtml(navbar.hospitalName || safeSite.name)}</span>
+            ${
+              navbar.showTagline !== false && (navbar.tagline || editAttr)
+                ? `<span class="brand-tagline" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="navbar.tagline">${escapeHtml(navbar.tagline || "Medical Center")}</span>`
+                : ""
+            }
           </div>
         </div>
 
         <!-- Desktop Nav -->
         <nav class="desktop-nav" style="display: flex; align-items: center; gap: 1.75rem;">
           ${(navbar.links || [])
-            .map((link) => `<a href="${link.href}" class="nav-link">${escapeHtml(link.label)}</a>`)
+            .map((link) => `<a href="${link.href}" class="nav-link" style="white-space: nowrap;">${escapeHtml(link.label)}</a>`)
             .join("")}
-          <a href="${navbarBtn.href}" ${navbarBtn.targetAttr} data-btn-id="navbar.cta" class="btn ${navbarBtn.variantClass}" ${editAttr} data-field="navbar.ctaText">${escapeHtml(navbarBtn.label)}</a>
+          <a href="${navbarBtn.href}" ${navbarBtn.targetAttr} data-btn-id="navbar.cta" class="btn ${navbarBtn.variantClass}" style="white-space: nowrap;" ${editAttr} data-field="navbar.ctaText">${escapeHtml(navbarBtn.label)}</a>
         </nav>
 
         <!-- Clean Toggle Button -->
@@ -856,7 +941,10 @@ export function compileLandingPageToHtml(
       }
     }, true);
 
-    // Support live DOM updates without full iframe reloads
+    ${
+      isEditable
+        ? `
+    // Support live DOM updates without full iframe reloads in studio mode
     window.addEventListener('message', function(e) {
       if (!e.data) return;
 
@@ -907,57 +995,364 @@ export function compileLandingPageToHtml(
       }
     });
 
-    ${
-      isEditable
-        ? `
-      // Listen for text edits and sync with parent on blur to prevent reload loops
-      document.addEventListener('blur', function(e) {
-        var target = e.target;
-        if (target && target.hasAttribute('data-field')) {
-          var field = target.getAttribute('data-field');
-          var value = target.innerText.trim();
+    var FIELD_LIMITS = ${JSON.stringify(FIELD_GUARDRAIL_LIMITS)};
+    var FIELD_MAX_LINES = ${JSON.stringify(FIELD_MAX_LINES)};
+
+    function getFieldLimit(field) {
+      if (!field) return 400;
+      if (FIELD_LIMITS[field]) return FIELD_LIMITS[field];
+      var parts = field.split('.');
+      if (parts.length === 4) {
+        var generalKey = parts[0] + '.' + parts[3];
+        if (FIELD_LIMITS[generalKey]) return FIELD_LIMITS[generalKey];
+      }
+      return 400;
+    }
+
+    function getFieldMaxLines(field) {
+      if (!field) return 1;
+      if (FIELD_MAX_LINES[field]) return FIELD_MAX_LINES[field];
+      var parts = field.split('.');
+      if (parts.length === 4) {
+        var generalKey = parts[0] + '.' + parts[3];
+        if (FIELD_MAX_LINES[generalKey]) return FIELD_MAX_LINES[generalKey];
+      }
+      if (field.indexOf('description') !== -1 || field.indexOf('subheadline') !== -1 || field.indexOf('quote') !== -1 || field.indexOf('disclaimer') !== -1) {
+        return 4;
+      }
+      return 1;
+    }
+
+    function getLines(str) {
+      if (!str) return [];
+      return str.replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n').split('\\n');
+    }
+    function getLineCount(str) {
+      if (!str) return 0;
+      return getLines(str).length;
+    }
+    function stripNewlines(str) {
+      if (!str) return '';
+      return str.replace(/\\r\\n/g, ' ').replace(/\\r/g, ' ').replace(/\\n/g, ' ');
+    }
+    function clampLines(str, max) {
+      if (!str) return '';
+      var lines = getLines(str);
+      if (lines.length > max) {
+        return lines.slice(0, max).join('\\n');
+      }
+      return str;
+    }
+
+    document.addEventListener('scroll', function(e) {
+      if (e.target && e.target.hasAttribute && e.target.hasAttribute('contenteditable')) {
+        e.target.scrollTop = 0;
+        e.target.scrollLeft = 0;
+      }
+    }, true);
+
+    document.addEventListener('beforeinput', function(e) {
+      var target = e.target;
+      if (target && target.hasAttribute('data-field')) {
+        var field = target.getAttribute('data-field');
+        var maxLen = getFieldLimit(field);
+        var maxLines = getFieldMaxLines(field);
+        var currentText = target.innerText || '';
+
+        if (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') {
+          if (maxLines === 1) {
+            e.preventDefault();
+            target.blur();
+            return;
+          }
+          var brCount = target.querySelectorAll('br').length;
+          var textLines = getLineCount(currentText);
+          var totalLines = Math.max(textLines, brCount + 1);
+          if (totalLines >= maxLines) {
+            e.preventDefault();
+            window.parent.postMessage({
+              type: 'CANVAS_MAX_LINES_REACHED',
+              field: field,
+              maxLines: maxLines
+            }, '*');
+            return;
+          }
+        }
+
+        if (e.inputType === 'insertText' && e.data) {
+          var selectedLength = 0;
+          var sel = window.getSelection();
+          if (sel && !sel.isCollapsed) {
+            selectedLength = sel.toString().length;
+          }
+          if (currentText.length - selectedLength + e.data.length > maxLen) {
+            e.preventDefault();
+            window.parent.postMessage({
+              type: 'CANVAS_LIMIT_EXCEEDED',
+              field: field,
+              maxLength: maxLen
+            }, '*');
+            return;
+          }
+        }
+      }
+    }, true);
+
+    document.addEventListener('input', function(e) {
+      var target = e.target;
+      if (target && target.hasAttribute('data-field')) {
+        var field = target.getAttribute('data-field');
+        var maxLen = getFieldLimit(field);
+        var maxLines = getFieldMaxLines(field);
+        var text = target.innerText || '';
+        var changed = false;
+
+        target.scrollTop = 0;
+        target.scrollLeft = 0;
+
+        if (maxLines === 1) {
+          var stripped = stripNewlines(text);
+          if (stripped !== text) {
+            text = stripped;
+            changed = true;
+          }
+          var allBrs = target.querySelectorAll('br');
+          if (allBrs.length > 0) {
+            allBrs.forEach(function(b) { if (b.parentNode) b.parentNode.removeChild(b); });
+            changed = true;
+          }
+        } else {
+          var lines = getLines(text);
+          if (lines.length > maxLines) {
+            text = lines.slice(0, maxLines).join('\\n');
+            changed = true;
+            window.parent.postMessage({
+              type: 'CANVAS_MAX_LINES_REACHED',
+              field: field,
+              maxLines: maxLines
+            }, '*');
+          }
+
+          var brs = target.querySelectorAll('br');
+          if (brs.length >= maxLines) {
+            for (var i = maxLines - 1; i < brs.length; i++) {
+              if (brs[i] && brs[i].parentNode) brs[i].parentNode.removeChild(brs[i]);
+            }
+            changed = true;
+            window.parent.postMessage({
+              type: 'CANVAS_MAX_LINES_REACHED',
+              field: field,
+              maxLines: maxLines
+            }, '*');
+          }
+        }
+
+        if (text.length > maxLen) {
+          text = text.slice(0, maxLen);
+          changed = true;
+          window.parent.postMessage({
+            type: 'CANVAS_LIMIT_EXCEEDED',
+            field: field,
+            maxLength: maxLen
+          }, '*');
+        }
+
+        if (changed) {
+          target.innerText = text;
+          try {
+            var sel2 = window.getSelection();
+            var range = document.createRange();
+            range.selectNodeContents(target);
+            range.collapse(false);
+            sel2.removeAllRanges();
+            sel2.addRange(range);
+          } catch(err) {}
+        }
+
+        window.parent.postMessage({
+          type: 'CANVAS_TYPING_ACTIVE',
+          field: field
+        }, '*');
+
+        if (target._syncTimer) clearTimeout(target._syncTimer);
+        target._syncTimer = setTimeout(function() {
+          var syncVal = target.innerText.trim();
+          if (maxLines === 1) syncVal = stripNewlines(syncVal);
+          else syncVal = clampLines(syncVal, maxLines);
+          if (syncVal.length > maxLen) syncVal = syncVal.slice(0, maxLen);
           window.parent.postMessage({
             type: 'CANVAS_TEXT_CHANGE',
             field: field,
-            value: value
+            value: syncVal
+          }, '*');
+        }, 120);
+      }
+    }, true);
+
+    document.addEventListener('paste', function(e) {
+      var target = e.target;
+      if (target && (target.hasAttribute('data-field') || target.closest('[data-field]'))) {
+        var el = target.hasAttribute('data-field') ? target : target.closest('[data-field]');
+        var field = el.getAttribute('data-field');
+        var maxLen = getFieldLimit(field);
+        var maxLines = getFieldMaxLines(field);
+        var pastedText = (e.clipboardData || window.clipboardData).getData('text') || '';
+        var currentText = el.innerText || '';
+
+        if (maxLines === 1) {
+          pastedText = stripNewlines(pastedText);
+        } else {
+          pastedText = clampLines(pastedText, maxLines);
+        }
+
+        if (currentText.length + pastedText.length > maxLen) {
+          e.preventDefault();
+          var remaining = Math.max(0, maxLen - currentText.length);
+          var trimmed = pastedText.slice(0, remaining);
+          document.execCommand('insertText', false, trimmed);
+
+          window.parent.postMessage({
+            type: 'CANVAS_PASTE_TRIMMED',
+            field: field,
+            maxLength: maxLen
           }, '*');
         }
-      }, true);
 
-      // Handle Enter key and global Undo/Redo inside iframe
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          var target = e.target;
-          if (target && target.hasAttribute('data-field')) {
-            e.preventDefault();
-            target.blur();
-          }
+        window.parent.postMessage({
+          type: 'CANVAS_TYPING_ACTIVE',
+          field: field
+        }, '*');
+      }
+    }, true);
+
+    document.addEventListener('blur', function(e) {
+      var target = e.target;
+      if (target && target.hasAttribute('data-field')) {
+        if (target._syncTimer) clearTimeout(target._syncTimer);
+        var field = target.getAttribute('data-field');
+        var maxLines = getFieldMaxLines(field);
+        var maxLen = getFieldLimit(field);
+        var value = target.innerText.trim();
+
+        if (maxLines === 1) {
+          value = stripNewlines(value);
+        } else {
+          value = clampLines(value, maxLines);
+        }
+        if (value.length > maxLen) {
+          value = value.slice(0, maxLen);
         }
 
-        // Forward Ctrl+Z / Ctrl+Y to Studio History Engine when not inside text edit
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-          var isTextNode = e.target && (e.target.hasAttribute('contenteditable') || e.target.closest('[contenteditable="true"]'));
-          if (!isTextNode) {
+        window.parent.postMessage({
+          type: 'CANVAS_TEXT_CHANGE',
+          field: field,
+          value: value
+        }, '*');
+      }
+    }, true);
+
+    document.addEventListener('keydown', function(e) {
+      var target = e.target;
+      if (e.key === 'Enter') {
+        if (target && target.hasAttribute('data-field')) {
+          var field = target.getAttribute('data-field');
+          var maxLines = getFieldMaxLines(field);
+
+          if (maxLines === 1) {
             e.preventDefault();
-            if (!e.shiftKey) {
-              window.parent.postMessage({ type: 'CANVAS_SHORTCUT_UNDO' }, '*');
-            } else {
-              window.parent.postMessage({ type: 'CANVAS_SHORTCUT_REDO' }, '*');
-            }
+            target.blur();
+            return;
           }
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-          var isTextNode = e.target && (e.target.hasAttribute('contenteditable') || e.target.closest('[contenteditable="true"]'));
-          if (!isTextNode) {
+
+          var brCount = target.querySelectorAll('br').length;
+          var divCount = target.querySelectorAll('div, p').length;
+          var textLines = getLineCount(target.innerText || '');
+          var totalLines = Math.max(textLines, brCount + 1, divCount);
+
+          if (totalLines >= maxLines) {
             e.preventDefault();
+            window.parent.postMessage({
+              type: 'CANVAS_MAX_LINES_REACHED',
+              field: field,
+              maxLines: maxLines
+            }, '*');
+            return;
+          }
+        }
+      }
+
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (target && target.hasAttribute('data-field')) {
+          var field2 = target.getAttribute('data-field');
+          var maxLen2 = getFieldLimit(field2);
+          var curr = target.innerText || '';
+          var sel3 = window.getSelection();
+          var hasSelection = sel3 && !sel3.isCollapsed;
+          if (!hasSelection && curr.length >= maxLen2) {
+            e.preventDefault();
+            window.parent.postMessage({
+              type: 'CANVAS_LIMIT_EXCEEDED',
+              field: field2,
+              maxLength: maxLen2
+            }, '*');
+            return;
+          }
+        }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        var isTextNode = e.target && (e.target.hasAttribute('contenteditable') || e.target.closest('[contenteditable="true"]'));
+        if (!isTextNode) {
+          e.preventDefault();
+          if (!e.shiftKey) {
+            window.parent.postMessage({ type: 'CANVAS_SHORTCUT_UNDO' }, '*');
+          } else {
             window.parent.postMessage({ type: 'CANVAS_SHORTCUT_REDO' }, '*');
           }
         }
-      });
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        var isTextNode = e.target && (e.target.hasAttribute('contenteditable') || e.target.closest('[contenteditable="true"]'));
+        if (!isTextNode) {
+          e.preventDefault();
+          window.parent.postMessage({ type: 'CANVAS_SHORTCUT_REDO' }, '*');
+        }
+      }
+    });
     `
-        : ""
+        : `
+    // Production Interactive Form Submission Handler
+    document.addEventListener('submit', function(e) {
+      var form = e.target;
+      if (form && form.tagName === 'FORM') {
+        e.preventDefault();
+        var submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button');
+        if (submitBtn) {
+          var originalText = submitBtn.innerText;
+          submitBtn.innerText = '✓ Request Received! We will contact you shortly.';
+          submitBtn.style.backgroundColor = '#10b981';
+          submitBtn.disabled = true;
+          setTimeout(function() {
+            submitBtn.innerText = originalText;
+            submitBtn.style.backgroundColor = '';
+            submitBtn.disabled = false;
+            form.reset();
+          }, 4000);
+        }
+      }
+    });
+    `
     }
   </script>
 
 </body>
 </html>`;
+
+  // In production output, completely strip any internal editor datasets
+  if (!isEditable) {
+    outputHtml = outputHtml
+      .replace(/\s*data-field="[^"]*"/g, "")
+      .replace(/\s*data-btn-id="[^"]*"/g, "");
+  }
+
+  return outputHtml;
 }

@@ -32,8 +32,10 @@ export function WhyUsSection({ data, onChange, theme }: WhyUsSectionProps) {
       <div className="mx-auto max-w-6xl">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <EditableText
-            value={data.eyebrow}
+            value={data.eyebrow || ""}
             onChange={(v) => updateField("eyebrow", v)}
+            maxLength={40}
+            fieldName="Why Us Eyebrow"
             tag="p"
             className="font-mono-app text-xs uppercase tracking-[.15em] font-semibold"
             style={{ color: theme.primary }}
@@ -42,14 +44,19 @@ export function WhyUsSection({ data, onChange, theme }: WhyUsSectionProps) {
             <EditableText
               value={data.headline}
               onChange={(v) => updateField("headline", v)}
+              maxLength={120}
+              fieldName="Why Us Headline"
               tag="h2"
               className="font-display text-3xl sm:text-4xl text-[hsl(var(--foreground))]"
             />
           </div>
           <div className="mt-4">
             <EditableText
-              value={data.description}
+              value={data.description || ""}
               onChange={(v) => updateField("description", v)}
+              maxLength={300}
+              maxLines={4}
+              fieldName="Why Us Description"
               tag="p"
               multiline
               className="text-sm leading-relaxed text-[hsl(var(--muted-foreground))]"
@@ -74,6 +81,8 @@ export function WhyUsSection({ data, onChange, theme }: WhyUsSectionProps) {
                 <EditableText
                   value={pillar.title}
                   onChange={(v) => updatePillar(pillar.id, "title", v)}
+                  maxLength={60}
+                  fieldName="Pillar Title"
                   tag="h3"
                   className="font-semibold text-lg text-[hsl(var(--foreground))]"
                 />
@@ -81,6 +90,9 @@ export function WhyUsSection({ data, onChange, theme }: WhyUsSectionProps) {
                   <EditableText
                     value={pillar.description}
                     onChange={(v) => updatePillar(pillar.id, "description", v)}
+                    maxLength={220}
+                    maxLines={4}
+                    fieldName="Pillar Description"
                     tag="p"
                     multiline
                     className="text-xs leading-relaxed text-[hsl(var(--muted-foreground))]"

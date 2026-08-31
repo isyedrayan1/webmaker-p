@@ -3,451 +3,202 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  Field,
-  LoadingRows,
-  Modal,
-  PageHeader,
-  ProjectIcon,
-  Skeleton,
-  StatusPill,
-  SubmitIcon,
-} from "@/components/factory-ui";
-import {
-  Activity,
-  ArrowUpRight,
-  ChevronDown,
-  Globe2,
-  Plus,
-  Rocket,
-} from "lucide-react";
-import type { Deployment, Template, Website, WebsiteSummary } from "@/lib/types";
+import { useAuth } from "@/context/AuthContext";
+import { LogoMark } from "@/components/factory-ui";
+import { ArrowRight, CheckCircle2, Loader2, Mail } from "lucide-react";
 
-function relativeDate(value?: string | null) {
-  if (!value) return "No activity yet";
-  const diff = Date.now() - new Date(value).getTime();
-  const hours = Math.max(1, Math.floor(diff / 3600000));
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+export default function LandingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-function WebsiteRow({ website }: { website: WebsiteSummary }) {
-  return (
-    <Link
-      data-testid={`link-website-${website.id}`}
-      href={`/websites/${website.id}`}
-      className="group grid items-center gap-4 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[hsl(var(--primary)/.38)] hover:shadow-[0_8px_26px_hsl(var(--foreground)/.05)] sm:grid-cols-[1fr_1.1fr_.8fr_.8fr_auto]"
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <ProjectIcon name={website.name} />
-        <div className="min-w-0">
-          <p
-            data-testid={`text-website-name-${website.id}`}
-            className="truncate font-semibold text-[hsl(var(--foreground))]"
-          >
-            {website.name}
-          </p>
-          <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">
-            {website.clientName}
-          </p>
-        </div>
-      </div>
-      <div className="hidden sm:block">
-        <p className="font-mono-app text-[10px] uppercase tracking-[.08em] text-[hsl(var(--muted-foreground))]">
-          Template
-        </p>
-        <p className="mt-1 truncate text-sm text-[hsl(var(--foreground))]">
-          {website.templateName}
-        </p>
-      </div>
-      <div>
-        <StatusPill status={website.status} />
-      </div>
-      <div className="hidden text-xs text-[hsl(var(--muted-foreground))] sm:block">
-        {relativeDate(website.updatedAt)}
-      </div>
-      <ChevronDown
-        size={16}
-        className="-rotate-90 text-[hsl(var(--muted-foreground))] transition group-hover:translate-x-1 group-hover:text-[hsl(var(--primary))]"
-      />
-    </Link>
-  );
-}
-
-function CreateWebsiteModal({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: (website: Website) => void;
-}) {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Form State
+  const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [templateId, setTemplateId] = useState("");
-  const [error, setError] = useState("");
+  const [submittedEntry, setSubmittedEntry] = useState<{
+    position: number;
+    email: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
+  // If user is already authenticated, redirect straight to private studio workspace
   useEffect(() => {
-    fetch("/api/templates")
-      .then((res) => res.json())
-      .then((data) => {
-        setTemplates(data);
-        if (data.length > 0) setTemplateId(data[0].id);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    if (!loading && user) {
+      router.replace("/websites");
+    }
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !clientName.trim() || !templateId) return;
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
 
     setSubmitting(true);
-    setError("");
+    setError(null);
 
     try {
-      const res = await fetch("/api/websites", {
+      const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          clientName: clientName.trim(),
-          templateId,
-        }),
+        body: JSON.stringify({ email: email.trim() }),
       });
 
-      if (!res.ok) throw new Error("Failed to create website");
-      const created = await res.json();
-      onCreated(created);
-    } catch {
-      setError("We couldn't create that draft. Please try again.");
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to join waitlist");
+      }
+
+      setSubmittedEntry({
+        position: data.position || 1,
+        email: data.email,
+      });
+      setEmail("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal title="Create New Website" eyebrow="Quick Setup" onClose={onClose}>
-      {loading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-10" />
-          <Skeleton className="h-10" />
-          <Skeleton className="h-10" />
+    <div className="min-h-screen w-full flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-[hsl(var(--background))] text-[hsl(var(--foreground))] grain selection:bg-[hsl(var(--primary)/.2)] overflow-x-hidden">
+      {/* ================= TOP HEADER ================= */}
+      <header className="w-full flex items-center justify-between z-10">
+        <Link href="/" className="inline-flex items-center gap-3 group">
+          <LogoMark />
+          <span className="font-display text-xl font-bold tracking-tight text-[hsl(var(--foreground))]">
+            Webmaker
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] px-5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] shadow-2xs hover:shadow-xs transition"
+          >
+            Sign In
+          </Link>
         </div>
-      ) : (
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <label className="block text-sm font-semibold">
-            Website name
-            <Field
-              data-testid="input-website-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Harborview Clinic"
-              className="mt-1.5"
-            />
-          </label>
-          <label className="block text-sm font-semibold">
-            Client name
-            <Field
-              data-testid="input-client-name"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="e.g. Harborview Medical Group"
-              className="mt-1.5"
-            />
-          </label>
-          <label className="block text-sm font-semibold">
-            Starting template
-            <select
-              data-testid="select-website-template"
-              value={templateId}
-              onChange={(e) => setTemplateId(e.target.value)}
-              className="mt-1.5 h-10 w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--card))] px-3 text-sm"
-            >
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name} · {template.category}
-                </option>
-              ))}
-            </select>
-          </label>
+      </header>
 
-          {error && (
-            <p className="mt-3 text-sm text-[hsl(var(--destructive))]">
-              {error}
-            </p>
-          )}
+      {/* ================= MAIN SECTION ================= */}
+      <main className="my-auto py-10 lg:py-12 grid gap-12 lg:gap-8 lg:grid-cols-12 items-center z-10">
+        {/* TOP LEFT SECTION (LEFT ALIGNED) */}
+        <div className="lg:col-span-7 space-y-6 text-left max-w-2xl">
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[hsl(var(--foreground))] leading-[1.08]">
+            Craft high-converting production websites at warp speed.
+          </h1>
 
-          <Button
-            data-testid="button-create-website-submit"
-            type="submit"
-            disabled={
-              submitting || !name.trim() || !clientName.trim() || !templateId
-            }
-            className="w-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
-          >
-            {submitting ? <SubmitIcon /> : <Plus size={16} />}
-            Create draft website
-          </Button>
-        </form>
-      )}
-    </Modal>
-  );
-}
+          <p className="font-sans text-sm sm:text-base text-[hsl(var(--muted-foreground))] leading-relaxed max-w-xl">
+            Zero backend runtime, continuous cloud auto-sync, and instant 1-click deployments engineered for modern businesses, agencies, and creators.
+          </p>
 
-export default function OverviewPage() {
-  const router = useRouter();
-  const [websites, setWebsites] = useState<WebsiteSummary[]>([]);
-  const [deployments, setDeployments] = useState<Deployment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
-
-  const fetchData = () => {
-    setLoading(true);
-    setError(false);
-    Promise.all([
-      fetch("/api/websites").then((r) => r.json()),
-      fetch("/api/deployments").then((r) => r.json()),
-    ])
-      .then(([webData, depData]) => {
-        setWebsites(webData);
-        setDeployments(depData);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError(true);
-        setLoading(false);
-      });
-  };
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([
-      fetch("/api/websites").then((r) => r.json()),
-      fetch("/api/deployments").then((r) => r.json()),
-    ])
-      .then(([webData, depData]) => {
-        if (!active) return;
-        setWebsites(webData);
-        setDeployments(depData);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (!active) return;
-        setError(true);
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const active = websites.filter(
-    (item) => item.status !== "live" && item.status !== "published"
-  );
-  const recent = [...websites]
-    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
-    .slice(0, 4);
-
-  return (
-    <AppShell>
-      <PageHeader
-        eyebrow="Workspace Overview"
-        title="Overview"
-        description="Manage and monitor all active websites, drafts, and production deployments."
-        action={
-          <Button
-            data-testid="button-new-website"
-            onClick={() => setCreateOpen(true)}
-            className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm"
-          >
-            <Plus size={16} />
-            New website
-          </Button>
-        }
-      />
-
-      <section className="grid gap-4 md:grid-cols-3">
-        {[
-          {
-            label: "Total Websites",
-            value: loading ? "—" : String(websites.length),
-            note: "active website projects",
-            icon: Globe2,
-          },
-          {
-            label: "Drafts in Progress",
-            value: loading ? "—" : String(active.length),
-            note: "websites currently being edited",
-            icon: Activity,
-          },
-          {
-            label: "Live Deployments",
-            value: loading
-              ? "—"
-              : String(deployments.filter((item) => item.status === "live").length),
-            note: "published production websites",
-            icon: Rocket,
-          },
-        ].map(({ label, value, note, icon: Icon }, index) => (
-          <div
-            key={label}
-            className={`animate-enter rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 ${
-              index === 1
-                ? "border-[hsl(var(--accent)/.5)] bg-[hsl(var(--accent)/.13)]"
-                : ""
-            }`}
-            style={{ animationDelay: `${index * 80}ms` }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="font-mono-app text-[10px] uppercase tracking-[.13em] text-[hsl(var(--muted-foreground))]">
-                {label}
-              </p>
-              <Icon size={17} className="text-[hsl(var(--primary))]" />
-            </div>
-            <p
-              data-testid={`metric-${label.toLowerCase().replaceAll(" ", "-")}`}
-              className="mt-5 font-display text-4xl"
-            >
-              {value}
-            </p>
-            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-              {note}
-            </p>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-10 grid gap-8 xl:grid-cols-[1.55fr_1fr]">
-        <div>
-          <div className="mb-4 flex items-end justify-between">
-            <div>
-              <p className="font-mono-app text-[10px] uppercase tracking-[.14em] text-[hsl(var(--primary))] font-semibold">
-                Projects
-              </p>
-              <h2 className="mt-1 font-display text-3xl">Recent websites</h2>
-            </div>
-            <Link
-              data-testid="link-view-all-websites"
-              href="/websites"
-              className="text-xs font-semibold text-[hsl(var(--primary))] hover:underline"
-            >
-              View all{" "}
-              <ArrowUpRight size={13} className="ml-1 inline" />
-            </Link>
-          </div>
-
-          {loading ? (
-            <LoadingRows />
-          ) : error ? (
-            <ErrorState onRetry={fetchData} />
-          ) : recent.length ? (
-            <div className="space-y-3">
-              {recent.map((website) => (
-                <WebsiteRow key={website.id} website={website} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={Globe2}
-              eyebrow="No projects yet"
-              title="No websites created yet"
-              body="Create your first website from our template library to get started."
-              action={
-                <Button
-                  onClick={() => setCreateOpen(true)}
-                  className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
-                >
-                  <Plus size={15} />
-                  Create website
-                </Button>
-              }
-            />
-          )}
-        </div>
-
-        <div>
-          <div className="mb-4 flex items-end justify-between">
-            <div>
-              <p className="font-mono-app text-[10px] uppercase tracking-[.14em] text-[hsl(var(--primary))] font-semibold">
-                Activity
-              </p>
-              <h2 className="mt-1 font-display text-3xl">Deployment activity</h2>
-            </div>
-            <Activity
-              size={17}
-              className="mb-1 text-[hsl(var(--muted-foreground))]"
-            />
-          </div>
-
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
-            {loading ? (
-              <div className="space-y-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-3">
-                    <Skeleton className="h-7 w-7 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-3 w-3/4" />
-                      <Skeleton className="h-2 w-1/3" />
-                    </div>
-                  </div>
-                ))}
+          {/* GOOEY ANIMATED EARLY ACCESS FORM */}
+          <div className="pt-2">
+            {submittedEntry ? (
+              <div className="inline-flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 sm:px-5 sm:py-3.5 shadow-sm animate-in zoom-in-95 duration-300">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                  <CheckCircle2 size={18} />
+                  <span>Spot #{submittedEntry.position} Reserved!</span>
+                </div>
+                <div className="hidden sm:block h-4 w-px bg-emerald-500/30" />
+                <p className="font-sans text-xs text-[hsl(var(--foreground))]">
+                  We&apos;ll send your invite link to <strong className="font-semibold">{submittedEntry.email}</strong> shortly.
+                </p>
               </div>
-            ) : error ? (
-              <ErrorState onRetry={fetchData} />
             ) : (
-              deployments.slice(0, 4).map((deployment, index) => (
+              <form
+                onSubmit={handleSubmit}
+                className="relative max-w-md space-y-2"
+              >
+                {/* Gooey morphing container with liquid aura */}
                 <div
-                  key={deployment.id}
-                  className="relative flex gap-3 pb-6 last:pb-0"
+                  className={`relative p-1 rounded-full transition-all duration-300 ${
+                    isFocused
+                      ? "bg-gradient-to-r from-[hsl(var(--primary))] via-teal-500 to-[hsl(var(--accent))] shadow-[0_0_24px_rgba(20,184,166,0.22)]"
+                      : "bg-[hsl(var(--border))]"
+                  }`}
                 >
-                  <div className="relative flex w-7 justify-center">
-                    <div className="z-10 flex h-7 w-7 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--primary))]">
-                      <Rocket size={13} />
+                  <div className="flex flex-col sm:flex-row items-center gap-1.5 rounded-full bg-[hsl(var(--card))] p-1">
+                    <div className="relative w-full flex-1 flex items-center pl-3.5">
+                      <Mail
+                        size={15}
+                        className={`transition-colors duration-200 ${
+                          isFocused
+                            ? "text-[hsl(var(--primary))]"
+                            : "text-[hsl(var(--muted-foreground))]"
+                        }`}
+                      />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                        placeholder="Enter your work email..."
+                        autoComplete="off"
+                        spellCheck={false}
+                        required
+                        className="w-full h-10 bg-transparent pl-2.5 pr-3 font-sans text-xs sm:text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:bg-transparent active:bg-transparent"
+                      />
                     </div>
-                    {index < Math.min(deployments.length, 4) - 1 && (
-                      <div className="absolute top-7 h-full w-px bg-[hsl(var(--border))]" />
-                    )}
-                  </div>
-                  <div className="min-w-0 pt-1">
-                    <p className="text-sm font-semibold">
-                      {deployment.websiteName}{" "}
-                      <span className="font-normal text-[hsl(var(--muted-foreground))]">
-                        went {deployment.status}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-                      {relativeDate(deployment.createdAt)} · {deployment.mode} mode
-                    </p>
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full sm:w-auto h-10 px-5 rounded-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-white font-sans text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      {submitting ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <>
+                          <span>Get Early Access</span>
+                          <ArrowRight size={14} />
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
-              ))
-            )}
 
-            {!loading && !error && !deployments.length && (
-              <p className="py-10 text-center text-sm text-[hsl(var(--muted-foreground))]">
-                Deployment logs will appear here when websites are published.
-              </p>
+                {error && (
+                  <p className="pl-3 font-sans text-xs text-rose-500 animate-in fade-in-50">
+                    {error}
+                  </p>
+                )}
+              </form>
             )}
           </div>
         </div>
-      </section>
 
-      {createOpen && (
-        <CreateWebsiteModal
-          onClose={() => setCreateOpen(false)}
-          onCreated={(site) => router.push(`/websites/${site.id}`)}
-        />
-      )}
-    </AppShell>
+        {/* BOTTOM RIGHT SECTION (RIGHT ALIGNED) */}
+        <div className="lg:col-span-5 space-y-4 text-left lg:text-right lg:ml-auto max-w-lg lg:mt-24">
+          <p className="font-mono-app text-[11px] uppercase tracking-widest text-[hsl(var(--primary))] font-semibold">
+            Autonomous Deployments
+          </p>
+
+          <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[hsl(var(--foreground))] leading-tight">
+            Instant custom domains & zero server overhead.
+          </h2>
+
+          <p className="font-sans text-xs sm:text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
+            Generate 100% pure standalone HTML/CSS packages with automated DNS verification, free SSL, and instantaneous global edge delivery.
+          </p>
+        </div>
+      </main>
+
+      {/* ================= FOOTER / STATUS BAR ================= */}
+      <footer className="w-full pt-6 border-t border-[hsl(var(--border))] flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-mono-app text-[hsl(var(--muted-foreground))] z-10">
+        <div>
+          © {new Date().getFullYear()} Webmaker Platform · All rights reserved.
+        </div>
+        <div className="flex items-center gap-2 text-[hsl(var(--muted-foreground))] font-medium">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span>Currently getting built · Early Preview</span>
+        </div>
+      </footer>
+    </div>
   );
 }

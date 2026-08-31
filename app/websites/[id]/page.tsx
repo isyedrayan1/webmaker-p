@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BuilderCanvas,
   type BuilderMode,
@@ -9,11 +10,9 @@ import {
 } from "@/components/canvas/BuilderCanvas";
 import { SectionNavigator } from "@/components/canvas/SectionNavigator";
 import {
-  Button,
   ErrorState,
   Skeleton,
   StatusPill,
-  SubmitIcon,
 } from "@/components/factory-ui";
 import {
   AlertCircle,
@@ -126,6 +125,7 @@ export default function WebsiteEditorPage({
 
   const [website, setWebsite] = useState<Website | null>(null);
   const [allWebsites, setAllWebsites] = useState<WebsiteSummary[]>([]);
+  const router = useRouter();
   const [pageData, setPageData] = useState<LandingPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,9 +142,18 @@ export default function WebsiteEditorPage({
 
   // Cloud Auto-Save Engine State
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("saved");
+  const [lastSavedTime, setLastSavedTime] = useState<string>("just now");
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedStateRef = useRef<string>("");
   const isInitialLoadRef = useRef(true);
+
+  const handleNavigate = async (e: React.MouseEvent, url: string) => {
+    e.preventDefault();
+    if (pageData && JSON.stringify(pageData) !== lastSavedStateRef.current) {
+      await handleSaveSilent();
+    }
+    router.push(url);
+  };
 
   // Dropdown states & refs for click-outside dismissal
   const [appNavOpen, setAppNavOpen] = useState(false);
@@ -170,7 +179,7 @@ export default function WebsiteEditorPage({
     setPageData(newData);
   };
 
-  const handleUndo = () => {
+  const handleUndo = useCallback(() => {
     if (historyPast.length === 0 || !pageData) return;
     const previous = historyPast[historyPast.length - 1];
     const newPast = historyPast.slice(0, -1);
@@ -178,9 +187,9 @@ export default function WebsiteEditorPage({
     setHistoryFuture((prev) => [structuredClone(pageData), ...prev]);
     setPageData(previous);
     toast.info("Undo: Reverted change", { duration: 1000 });
-  };
+  }, [historyPast, pageData]);
 
-  const handleRedo = () => {
+  const handleRedo = useCallback(() => {
     if (historyFuture.length === 0 || !pageData) return;
     const next = historyFuture[0];
     const newFuture = historyFuture.slice(1);
@@ -188,7 +197,7 @@ export default function WebsiteEditorPage({
     setHistoryPast((prev) => [...prev, structuredClone(pageData)]);
     setPageData(next);
     toast.info("Redo: Restored change", { duration: 1000 });
-  };
+  }, [historyFuture, pageData]);
 
   // Global Keyboard Shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, Cmd+Z, Cmd+Shift+Z)
   useEffect(() => {
@@ -233,7 +242,7 @@ export default function WebsiteEditorPage({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("message", handleWindowMessage);
     };
-  }, [pageData, historyPast, historyFuture]);
+  }, [handleUndo, handleRedo]);
 
   // Prevent accidental navigation when unsaved edits are present
   useEffect(() => {
@@ -333,7 +342,7 @@ export default function WebsiteEditorPage({
     };
   }, [id]);
 
-  // Debounced Auto-Save Engine (3s idle timer, zero write spam)
+  // Debounced Auto-Save Engine (800ms idle timer, fast & responsive)
   useEffect(() => {
     if (isInitialLoadRef.current || !pageData) return;
 
@@ -349,7 +358,7 @@ export default function WebsiteEditorPage({
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Trigger background auto-save after 3 seconds of user idle
+    // Trigger background auto-save after 600ms of user idle
     autoSaveTimerRef.current = setTimeout(async () => {
       setSyncStatus("saving");
       try {
@@ -358,16 +367,21 @@ export default function WebsiteEditorPage({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ landingPageData: pageData }),
         });
-        if (!res.ok) throw new Error("Auto-save failed");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Auto-save failed with status ${res.status}`);
+        }
         const updated = await res.json();
         setWebsite(updated);
         lastSavedStateRef.current = currentStr;
+        const now = new Date();
+        setLastSavedTime(now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
         setSyncStatus("saved");
       } catch (err) {
         console.error("Auto-save error:", err);
         setSyncStatus("error");
       }
-    }, 3000);
+    }, 600);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -394,6 +408,29 @@ export default function WebsiteEditorPage({
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
+  const handleSaveSilent = async () => {
+    if (!pageData) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    setSyncStatus("saving");
+    try {
+      const res = await fetch(`/api/websites/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ landingPageData: pageData }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setWebsite(updated);
+        lastSavedStateRef.current = JSON.stringify(pageData);
+        const now = new Date();
+        setLastSavedTime(now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+        setSyncStatus("saved");
+      }
+    } catch {
+      setSyncStatus("error");
+    }
+  };
+
   const handleSave = async () => {
     if (!pageData) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -409,6 +446,8 @@ export default function WebsiteEditorPage({
       const updated = await res.json();
       setWebsite(updated);
       lastSavedStateRef.current = JSON.stringify(pageData);
+      const now = new Date();
+      setLastSavedTime(now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
       setSyncStatus("saved");
       toast.success("Draft saved successfully & synced!");
     } catch {
@@ -647,7 +686,10 @@ export default function WebsiteEditorPage({
             href={`/api/websites/${id}/preview`}
             target="_blank"
             rel="noreferrer"
-            onClick={() => setPublishDropdownOpen(false)}
+            onClick={async () => {
+              setPublishDropdownOpen(false);
+              await handleSaveSilent();
+            }}
             className="w-full flex items-start gap-2.5 rounded-xl p-2.5 text-left hover:bg-[hsl(var(--muted))] transition cursor-pointer group"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))] shadow-2xs shrink-0 group-hover:text-[hsl(var(--foreground))]">
@@ -702,6 +744,7 @@ export default function WebsiteEditorPage({
                 <Link
                   data-testid="link-back-websites"
                   href="/websites"
+                  onClick={(e) => handleNavigate(e, "/websites")}
                   className="flex h-9 w-9 items-center justify-center rounded-l-xl text-[hsl(var(--muted-foreground))] transition hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                   title="Back to Websites Dashboard"
                 >
@@ -733,7 +776,10 @@ export default function WebsiteEditorPage({
                     <div className="space-y-0.5">
                       <Link
                         href="/websites"
-                        onClick={() => setAppNavOpen(false)}
+                        onClick={(e) => {
+                          setAppNavOpen(false);
+                          handleNavigate(e, "/websites");
+                        }}
                         className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition"
                       >
                         <Globe2 size={15} className="text-[hsl(var(--primary))]" />
@@ -741,7 +787,10 @@ export default function WebsiteEditorPage({
                       </Link>
                       <Link
                         href="/templates"
-                        onClick={() => setAppNavOpen(false)}
+                        onClick={(e) => {
+                          setAppNavOpen(false);
+                          handleNavigate(e, "/templates");
+                        }}
                         className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition"
                       >
                         <Boxes size={15} className="text-amber-500" />
@@ -749,7 +798,10 @@ export default function WebsiteEditorPage({
                       </Link>
                       <Link
                         href="/deployments"
-                        onClick={() => setAppNavOpen(false)}
+                        onClick={(e) => {
+                          setAppNavOpen(false);
+                          handleNavigate(e, "/deployments");
+                        }}
                         className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition"
                       >
                         <Rocket size={15} className="text-emerald-500" />
@@ -757,7 +809,10 @@ export default function WebsiteEditorPage({
                       </Link>
                       <Link
                         href="/domains"
-                        onClick={() => setAppNavOpen(false)}
+                        onClick={(e) => {
+                          setAppNavOpen(false);
+                          handleNavigate(e, "/domains");
+                        }}
                         className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition"
                       >
                         <ShieldCheck size={15} className="text-blue-500" />
@@ -765,7 +820,10 @@ export default function WebsiteEditorPage({
                       </Link>
                       <Link
                         href="/settings"
-                        onClick={() => setAppNavOpen(false)}
+                        onClick={(e) => {
+                          setAppNavOpen(false);
+                          handleNavigate(e, "/settings");
+                        }}
                         className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition"
                       >
                         <Settings2 size={15} className="text-purple-500" />
@@ -774,7 +832,10 @@ export default function WebsiteEditorPage({
                       <div className="my-1 border-t border-[hsl(var(--border))]" />
                       <Link
                         href="/"
-                        onClick={() => setAppNavOpen(false)}
+                        onClick={(e) => {
+                          setAppNavOpen(false);
+                          handleNavigate(e, "/");
+                        }}
                         className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition"
                       >
                         <LayoutDashboard size={15} />
@@ -830,7 +891,10 @@ export default function WebsiteEditorPage({
                           <Link
                             key={site.id}
                             href={`/websites/${site.id}`}
-                            onClick={() => setSiteSwitcherOpen(false)}
+                            onClick={(e) => {
+                              setSiteSwitcherOpen(false);
+                              handleNavigate(e, `/websites/${site.id}`);
+                            }}
                             className={`w-full flex items-center justify-between rounded-xl p-2.5 text-xs transition text-left ${
                               isCurrent
                                 ? "bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))] font-semibold"
@@ -855,7 +919,10 @@ export default function WebsiteEditorPage({
                     <div className="border-t border-[hsl(var(--border))] pt-1.5 mt-1 space-y-1">
                       <Link
                         href="/websites/new"
-                        onClick={() => setSiteSwitcherOpen(false)}
+                        onClick={(e) => {
+                          setSiteSwitcherOpen(false);
+                          handleNavigate(e, "/websites/new");
+                        }}
                         className="w-full flex items-center gap-2 rounded-xl p-2 text-xs font-semibold text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/.08)] transition"
                       >
                         <Plus size={14} />
@@ -863,7 +930,10 @@ export default function WebsiteEditorPage({
                       </Link>
                       <Link
                         href="/websites"
-                        onClick={() => setSiteSwitcherOpen(false)}
+                        onClick={(e) => {
+                          setSiteSwitcherOpen(false);
+                          handleNavigate(e, "/websites");
+                        }}
                         className="w-full flex items-center gap-2 rounded-xl p-2 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition"
                       >
                         <FolderKanban size={14} />
@@ -907,33 +977,54 @@ export default function WebsiteEditorPage({
 
             {/* Right: Actions Cluster (Status + Customize + Save + Preview + Publish) */}
             <div className="flex items-center gap-2 sm:gap-2.5">
-              {/* Cloud Auto-Save Status Pill in Right Section */}
-              <div className="flex h-9 items-center gap-1.5 px-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-xs font-mono-app shadow-2xs">
+              {/* Interactive Cloud Auto-Save Status Pill */}
+              <button
+                onClick={handleSave}
+                disabled={saving || syncStatus === "saving"}
+                title={
+                  syncStatus === "saved"
+                    ? `All changes saved to cloud (${lastSavedTime}). Click to force sync now.`
+                    : syncStatus === "unsaved"
+                    ? "Unsaved edits detected. Auto-saving in a moment... (Click to save immediately)"
+                    : syncStatus === "saving"
+                    ? "Saving changes to cloud in real time..."
+                    : "Sync error. Click to retry saving."
+                }
+                className={`flex h-9 items-center gap-1.5 px-3 rounded-full border text-xs font-mono-app shadow-2xs transition-all duration-200 cursor-pointer select-none group ${
+                  syncStatus === "saved"
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/50"
+                    : syncStatus === "unsaved"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/60 shadow-amber-500/5"
+                    : syncStatus === "saving"
+                    ? "border-[hsl(var(--primary)/.4)] bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))]"
+                    : "border-rose-500/40 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20"
+                }`}
+              >
                 {syncStatus === "saved" && (
                   <>
-                    <Cloud size={14} className="text-emerald-500" />
-                    <span className="text-[hsl(var(--muted-foreground))]">Saved</span>
+                    <Cloud size={14} className="text-emerald-500 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Saved</span>
                   </>
                 )}
                 {syncStatus === "unsaved" && (
                   <>
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">Unsaved</span>
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping shrink-0" />
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">Unsaved</span>
                   </>
                 )}
                 {syncStatus === "saving" && (
                   <>
-                    <Loader2 size={14} className="animate-spin text-[hsl(var(--primary))]" />
-                    <span className="text-[hsl(var(--primary))] font-medium">Saving...</span>
+                    <Loader2 size={14} className="animate-spin text-[hsl(var(--primary))] shrink-0" />
+                    <span className="font-semibold text-[hsl(var(--primary))]">Saving...</span>
                   </>
                 )}
                 {syncStatus === "error" && (
                   <>
-                    <AlertCircle size={14} className="text-rose-500" />
-                    <span className="text-rose-500 font-medium">Sync error</span>
+                    <AlertCircle size={14} className="text-rose-500 shrink-0" />
+                    <span className="font-semibold text-rose-500">Retry Sync</span>
                   </>
                 )}
-              </div>
+              </button>
 
               {/* Customize Sections Slide-Over Button */}
               <button
@@ -962,7 +1053,10 @@ export default function WebsiteEditorPage({
 
               {/* Enter Interactive Device Preview Mode */}
               <button
-                onClick={() => setMode("preview")}
+                onClick={async () => {
+                  await handleSaveSilent();
+                  setMode("preview");
+                }}
                 className="flex h-9 items-center gap-1.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3.5 text-xs font-semibold text-[hsl(var(--foreground))] shadow-2xs hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))] transition cursor-pointer"
                 title="Test responsive layouts on Desktop, Tablet, and Mobile"
               >
@@ -1043,6 +1137,8 @@ export default function WebsiteEditorPage({
           onChange={pushToHistory}
           mode={mode}
           previewDevice={previewDevice}
+          onUndo={handleUndo}
+          onTypingActive={() => setSyncStatus("unsaved")}
         />
 
         {/* ================= SLIDE-OVER STUDIO CUSTOMIZER ================= */}
@@ -1286,11 +1382,17 @@ export default function WebsiteEditorPage({
 
                     {/* 1. Button Label Input */}
                     <div>
-                      <label className="text-[10px] font-mono-app uppercase text-[hsl(var(--muted-foreground))] block mb-1">
-                        Button Label / Text
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-mono-app uppercase text-[hsl(var(--muted-foreground))] block">
+                          Button Label / Text
+                        </label>
+                        <span className="text-[9px] font-mono-app text-[hsl(var(--muted-foreground))]">
+                          {(currentBtnConfig.label || "").length}/28
+                        </span>
+                      </div>
                       <input
                         type="text"
+                        maxLength={28}
                         value={currentBtnConfig.label || ""}
                         placeholder={activeBtnMeta.defaultLabel}
                         onChange={(e) =>

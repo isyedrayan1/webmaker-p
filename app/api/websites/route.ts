@@ -1,8 +1,25 @@
 import { NextResponse } from "next/server";
 import { repository } from "@/lib/repository";
+import { listWebsitesFromFirebase } from "@/lib/firebase-service";
+import type { Website } from "@/lib/types";
 
 export async function GET() {
   try {
+    try {
+      const fbPromise = listWebsitesFromFirebase();
+      const timeoutPromise = new Promise<Website[]>((_, reject) =>
+        setTimeout(() => reject(new Error("Firebase list timeout")), 600)
+      );
+      const fbWebsites = await Promise.race([fbPromise, timeoutPromise]);
+      if (fbWebsites && fbWebsites.length > 0) {
+        for (const fbSite of fbWebsites) {
+          repository.upsertWebsite(fbSite);
+        }
+      }
+    } catch {
+      // Graceful fallback to cached repository websites
+    }
+
     const websites = repository.listWebsites();
     return NextResponse.json(websites);
   } catch (error) {

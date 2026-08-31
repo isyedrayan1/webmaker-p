@@ -1,6 +1,7 @@
 import { repository } from "@/lib/repository";
 import { compileLandingPageToHtml } from "@/lib/static-compiler";
 import { DEFAULT_CLINIC_DATA } from "@/lib/builder-types";
+import { getWebsiteFromFirebase } from "@/lib/firebase-service";
 import type { LandingPageData } from "@/lib/builder-types";
 
 export async function GET(
@@ -15,7 +16,19 @@ export async function GET(
     const rawId = resolvedParams?.id || "preview-site";
     const id = decodeURIComponent(rawId).trim();
 
-    const website = repository.getWebsite(id);
+    let website = repository.getWebsite(id);
+
+    // If website landingPageData is default or missing in memory, check Firebase
+    if (!website || !website.landingPageData) {
+      try {
+        const fbSite = await getWebsiteFromFirebase(id);
+        if (fbSite && fbSite.landingPageData) {
+          website = fbSite;
+        }
+      } catch (err) {
+        console.warn("Firebase preview fetch warning:", err);
+      }
+    }
 
     let pageData: LandingPageData;
     if (website && website.landingPageData) {

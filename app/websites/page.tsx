@@ -210,7 +210,11 @@ export default function WebsitesPage() {
     fetch("/api/websites")
       .then((res) => res.json())
       .then((data) => {
-        setWebsites(data);
+        if (Array.isArray(data)) {
+          setWebsites(data);
+        } else {
+          setWebsites([]);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -225,7 +229,11 @@ export default function WebsitesPage() {
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
-        setWebsites(data);
+        if (Array.isArray(data)) {
+          setWebsites(data);
+        } else {
+          setWebsites([]);
+        }
         setLoading(false);
       })
       .catch(() => {

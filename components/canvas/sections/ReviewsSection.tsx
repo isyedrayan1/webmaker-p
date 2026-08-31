@@ -1,8 +1,9 @@
 "use client";
 
 import { EditableText } from "../EditableText";
-import type { ReviewsSectionData, TestimonialItem, ThemeConfig } from "@/lib/builder-types";
+import { SECTION_ITEM_LIMITS, type ReviewsSectionData, type TestimonialItem, type ThemeConfig } from "@/lib/builder-types";
 import { Plus, Trash2, Star } from "lucide-react";
+import { toast } from "sonner";
 
 interface ReviewsSectionProps {
   data: ReviewsSectionData;
@@ -30,6 +31,10 @@ export function ReviewsSection({ data, onChange, theme }: ReviewsSectionProps) {
   };
 
   const addReview = () => {
+    if (data.reviews.length >= SECTION_ITEM_LIMITS.reviews.max) {
+      toast.warning(`Maximum ${SECTION_ITEM_LIMITS.reviews.max} testimonials reached for optimal layout balance.`);
+      return;
+    }
     const newRev: TestimonialItem = {
       id: `rev-${Date.now()}`,
       patientName: "New Patient Review",
@@ -43,50 +48,67 @@ export function ReviewsSection({ data, onChange, theme }: ReviewsSectionProps) {
   };
 
   const removeReview = (id: string) => {
-    if (data.reviews.length <= 1) return;
+    if (data.reviews.length <= SECTION_ITEM_LIMITS.reviews.min) {
+      toast.warning(`At least ${SECTION_ITEM_LIMITS.reviews.min} testimonial is required.`);
+      return;
+    }
     onChange({
       ...data,
       reviews: data.reviews.filter((rev) => rev.id !== id),
     });
   };
 
+  const showRating = data.showRatingSummary !== false && Boolean(data.ratingAverage);
+
   return (
     <section className="border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-6 py-20">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
           <div>
-            <EditableText
-              value={data.eyebrow}
-              onChange={(v) => updateField("eyebrow", v)}
-              tag="p"
-              className="font-mono-app text-xs uppercase tracking-[.15em] font-semibold"
-              style={{ color: theme.primary }}
-            />
+            {data.eyebrow && (
+              <EditableText
+                value={data.eyebrow}
+                onChange={(v) => updateField("eyebrow", v)}
+                maxLength={40}
+                fieldName="Reviews Eyebrow"
+                tag="p"
+                className="font-mono-app text-xs uppercase tracking-[.15em] font-semibold"
+                style={{ color: theme.primary }}
+              />
+            )}
             <div className="mt-2">
               <EditableText
                 value={data.headline}
                 onChange={(v) => updateField("headline", v)}
+                maxLength={120}
+                fieldName="Reviews Headline"
                 tag="h2"
-                className="font-display text-3xl sm:text-4xl text-[hsl(var(--foreground))]"
+                className="font-display text-3xl sm:text-4xl text-[hsl(var(--foreground))] break-words"
               />
             </div>
-            <div className="mt-2 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.primary }}>
-              <div className="flex items-center gap-0.5 text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={13} fill="currentColor" />
-                ))}
+            {showRating && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold" style={{ color: theme.primary }}>
+                <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={13} fill="currentColor" />
+                  ))}
+                </div>
+                <EditableText
+                  value={data.ratingAverage || "4.9"}
+                  onChange={(v) => updateField("ratingAverage", v)}
+                  maxLength={6}
+                  fieldName="Rating Average"
+                />
+                <span>/ 5.0 (</span>
+                <EditableText
+                  value={data.totalReviews || "500+"}
+                  onChange={(v) => updateField("totalReviews", v)}
+                  maxLength={15}
+                  fieldName="Total Reviews"
+                />
+                <span>Verified Patient Reviews)</span>
               </div>
-              <EditableText
-                value={data.ratingAverage}
-                onChange={(v) => updateField("ratingAverage", v)}
-              />
-              <span>/ 5.0 (</span>
-              <EditableText
-                value={data.totalReviews}
-                onChange={(v) => updateField("totalReviews", v)}
-              />
-              <span>Verified Patient Reviews)</span>
-            </div>
+            )}
           </div>
           <div>
             <button
@@ -98,11 +120,16 @@ export function ReviewsSection({ data, onChange, theme }: ReviewsSectionProps) {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div
+          className="grid gap-6 items-stretch"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+          }}
+        >
           {data.reviews.map((rev) => (
             <div
               key={rev.id}
-              className="group relative flex flex-col justify-between rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-xs transition hover:shadow-md"
+              className="group relative flex flex-col justify-between rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-xs transition hover:shadow-md min-w-0"
             >
               <button
                 onClick={() => removeReview(rev.id)}
@@ -112,31 +139,38 @@ export function ReviewsSection({ data, onChange, theme }: ReviewsSectionProps) {
                 <Trash2 size={15} />
               </button>
 
-              <div>
+              <div className="flex-1">
                 <div className="flex items-center gap-0.5 text-amber-500 mb-3">
-                  {[...Array(5)].map((_, i) => (
+                  {[...Array(Math.min(5, Math.max(1, rev.rating || 5)))].map((_, i) => (
                     <Star key={i} size={12} fill="currentColor" />
                   ))}
                 </div>
                 <EditableText
                   value={rev.quote}
                   onChange={(v) => updateReview(rev.id, "quote", v)}
+                  maxLength={450}
+                  maxLines={6}
+                  fieldName="Patient Testimonial Quote"
                   tag="p"
                   multiline
-                  className="text-xs leading-relaxed text-[hsl(var(--foreground))] italic"
+                  className="text-xs leading-relaxed text-[hsl(var(--foreground))] italic break-words"
                 />
               </div>
 
-              <div className="mt-6 pt-4 border-t border-[hsl(var(--border))] flex justify-between items-center text-xs">
+              <div className="mt-6 pt-4 border-t border-[hsl(var(--border))] flex justify-between items-center text-xs gap-2 mt-auto">
                 <EditableText
                   value={rev.patientName}
                   onChange={(v) => updateReview(rev.id, "patientName", v)}
-                  className="font-semibold text-[hsl(var(--foreground))]"
+                  maxLength={40}
+                  fieldName="Patient Name"
+                  className="font-semibold text-[hsl(var(--foreground))] truncate"
                 />
                 <EditableText
                   value={rev.treatment}
                   onChange={(v) => updateReview(rev.id, "treatment", v)}
-                  className="text-[hsl(var(--muted-foreground))]"
+                  maxLength={40}
+                  fieldName="Treatment Field"
+                  className="text-[hsl(var(--muted-foreground))] truncate text-right"
                 />
               </div>
             </div>

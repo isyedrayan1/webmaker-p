@@ -1,10 +1,12 @@
 import { getApps, initializeApp, getApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getFirestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBdbvKwlZAY7Vjnvh1MvLi-b_LX3Z4yKFQ",
   authDomain: "webmaker-mheim.firebaseapp.com",
+  databaseURL: "https://webmaker-mheim-default-rtdb.firebaseio.com",
   projectId: "webmaker-mheim",
   storageBucket: "webmaker-mheim.firebasestorage.app",
   messagingSenderId: "255884653509",
@@ -13,6 +15,10 @@ const firebaseConfig = {
 
 // Initialize Firebase (singleton pattern for Next.js hot reloads)
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
+// Firebase Authentication
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
 // Realtime Database (JSON Tree Database)
 export const db = getDatabase(app);

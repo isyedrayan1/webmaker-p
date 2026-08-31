@@ -96,19 +96,25 @@ export interface NavLink {
 
 export interface NavbarSectionData {
   hospitalName: string;
-  tagline: string;
-  emergencyPhone: string;
-  ctaText: string;
+  tagline?: string;
+  showTagline?: boolean;
+  logoType?: "icon_text" | "image" | "text_only";
+  logoUrl?: string;
+  showEmergencyTopBar?: boolean;
+  emergencyPhone?: string;
+  ctaText?: string;
   links: NavLink[];
 }
 
 export interface HeroSectionData {
-  badge: string;
+  badge?: string;
+  showBadge?: boolean;
   headline: string;
   subheadline: string;
   primaryCta: string;
-  secondaryCta: string;
-  trustSnippet: string;
+  secondaryCta?: string;
+  showSecondaryCta?: boolean;
+  trustSnippet?: string;
   imageUrl?: string;
 }
 
@@ -121,7 +127,7 @@ export interface StatItem {
 export type MetricItem = StatItem;
 
 export interface StatsSectionData {
-  headline: string;
+  headline?: string;
   items: StatItem[];
 }
 
@@ -134,9 +140,9 @@ export interface TrustPillar {
 export type PillarItem = TrustPillar;
 
 export interface WhyUsSectionData {
-  eyebrow: string;
+  eyebrow?: string;
   headline: string;
-  description: string;
+  description?: string;
   pillars: TrustPillar[];
 }
 
@@ -144,16 +150,16 @@ export interface ServiceItem {
   id: string;
   iconName: string;
   name: string;
-  badge: string;
+  badge?: string;
   description: string;
   highlights: string[];
 }
 export type ServiceCard = ServiceItem;
 
 export interface ServicesSectionData {
-  eyebrow: string;
+  eyebrow?: string;
   headline: string;
-  description: string;
+  description?: string;
   services: ServiceItem[];
 }
 
@@ -168,9 +174,9 @@ export interface DoctorProfile {
 }
 
 export interface DoctorsSectionData {
-  eyebrow: string;
+  eyebrow?: string;
   headline: string;
-  description: string;
+  description?: string;
   doctors: DoctorProfile[];
 }
 
@@ -184,11 +190,12 @@ export interface TestimonialItem {
 }
 
 export interface ReviewsSectionData {
-  eyebrow: string;
+  eyebrow?: string;
   headline: string;
-  description: string;
-  ratingAverage: string;
-  totalReviews: string;
+  description?: string;
+  ratingAverage?: string;
+  totalReviews?: string;
+  showRatingSummary?: boolean;
   reviews: TestimonialItem[];
 }
 
@@ -198,36 +205,37 @@ export interface ScheduleDay {
 }
 
 export interface HoursSectionData {
-  eyebrow: string;
+  eyebrow?: string;
   headline: string;
-  description: string;
-  emergencyNotice: string;
-  emergencyHotline: string;
+  description?: string;
+  showEmergencyNotice?: boolean;
+  emergencyNotice?: string;
+  emergencyHotline?: string;
   schedule: ScheduleDay[];
 }
 
 export interface BookingSectionData {
-  eyebrow: string;
+  eyebrow?: string;
   headline: string;
-  description: string;
-  address: string;
-  cityState: string;
-  phone: string;
-  email: string;
+  description?: string;
+  address?: string;
+  cityState?: string;
+  phone?: string;
+  email?: string;
   formTitle: string;
   departments: string[];
 }
 
 export interface FooterSectionData {
   hospitalName: string;
-  description: string;
-  accreditationBadge: string;
-  phone: string;
-  email: string;
-  address: string;
+  description?: string;
+  accreditationBadge?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
   quickLinks: { label: string; href: string }[];
-  medicalDisclaimer: string;
-  copyrightText: string;
+  medicalDisclaimer?: string;
+  copyrightText?: string;
 }
 
 export type SectionType =
@@ -286,6 +294,145 @@ export interface LandingPageData {
     description?: string;
   };
 }
+
+// -------------------------------------------------------------
+// DESIGN GUARDRAILS: Semantic Character & Item Count Limits
+// -------------------------------------------------------------
+export const FIELD_GUARDRAIL_LIMITS: Record<string, number> = {
+  // Navbar
+  "navbar.hospitalName": 60,
+  "navbar.tagline": 60,
+  "navbar.ctaText": 24,
+  "navbar.emergencyPhone": 22,
+
+  // Hero (Default + Max 2 lines)
+  "hero.badge": 45,
+  "hero.headline": 80,
+  "hero.subheadline": 240,
+  "hero.primaryCta": 24,
+  "hero.secondaryCta": 24,
+  "hero.trustSnippet": 80,
+
+  // Stats
+  "stats.value": 12,
+  "stats.label": 35,
+  "stats.subtext": 45,
+
+  // Why Us
+  "whyUs.eyebrow": 35,
+  "whyUs.headline": 80,
+  "whyUs.description": 220,
+  "whyUs.pillars.title": 45,
+  "whyUs.pillars.description": 140,
+
+  // Services
+  "services.eyebrow": 35,
+  "services.headline": 80,
+  "services.description": 220,
+  "services.name": 45,
+  "services.badge": 25,
+  "services.description_card": 140,
+
+  // Doctors
+  "doctors.eyebrow": 35,
+  "doctors.headline": 80,
+  "doctors.description": 220,
+  "doctors.name": 40,
+  "doctors.role": 40,
+  "doctors.credentials": 45,
+  "doctors.experience": 30,
+
+  // Reviews
+  "reviews.eyebrow": 35,
+  "reviews.headline": 80,
+  "reviews.ratingAverage": 5,
+  "reviews.totalReviews": 12,
+  "reviews.quote": 260,
+  "reviews.patientName": 35,
+  "reviews.treatment": 35,
+
+  // Hours
+  "hours.eyebrow": 35,
+  "hours.headline": 80,
+  "hours.description": 220,
+  "hours.emergencyNotice": 120,
+  "hours.emergencyHotline": 22,
+  "hours.schedule.day": 30,
+  "hours.schedule.hours": 30,
+
+  // Booking
+  "booking.eyebrow": 35,
+  "booking.headline": 80,
+  "booking.description": 220,
+  "booking.formTitle": 50,
+  "booking.address": 70,
+  "booking.cityState": 45,
+  "booking.phone": 22,
+  "booking.email": 35,
+
+  // Footer
+  "footer.hospitalName": 60,
+  "footer.description": 200,
+  "footer.accreditationBadge": 50,
+  "footer.address": 70,
+  "footer.phone": 22,
+  "footer.email": 35,
+  "footer.medicalDisclaimer": 220,
+  "footer.copyrightText": 60,
+};
+
+export const SECTION_ITEM_LIMITS = {
+  stats: { min: 2, max: 6, label: "Proof Metrics" },
+  services: { min: 1, max: 12, label: "Services" },
+  doctors: { min: 1, max: 8, label: "Doctor Profiles" },
+  reviews: { min: 1, max: 9, label: "Testimonials" },
+} as const;
+
+export const FIELD_MAX_LINES: Record<string, number> = {
+  "hero.headline": 2,
+  "hero.subheadline": 4,
+  "whyUs.headline": 2,
+  "whyUs.description": 4,
+  "whyUs.pillars.title": 2,
+  "whyUs.pillars.description": 3,
+  "services.headline": 2,
+  "services.description": 4,
+  "services.name": 2,
+  "services.description_card": 3,
+  "doctors.headline": 2,
+  "doctors.description": 4,
+  "doctors.name": 1,
+  "reviews.headline": 2,
+  "reviews.quote": 5,
+  "hours.headline": 2,
+  "hours.description": 4,
+  "hours.emergencyNotice": 3,
+  "booking.headline": 2,
+  "booking.description": 4,
+  "footer.description": 4,
+  "footer.medicalDisclaimer": 4,
+};
+
+export const FIELD_MAX_HEIGHTS: Record<string, number> = {
+  "hero.headline": 140,
+  "hero.subheadline": 160,
+  "hero.badge": 44,
+  "hero.primaryCta": 48,
+  "hero.secondaryCta": 48,
+  "whyUs.headline": 120,
+  "whyUs.description": 140,
+  "whyUs.pillars.description": 120,
+  "services.headline": 120,
+  "services.description": 140,
+  "services.description_card": 130,
+  "doctors.description": 130,
+  "reviews.quote": 160,
+  "hours.description": 140,
+  "hours.emergencyNotice": 100,
+  "booking.description": 140,
+  "footer.description": 140,
+  "footer.medicalDisclaimer": 140,
+};
 
 // -------------------------------------------------------------
 // TEMPLATE PRESET 1: Care Standard (General Hospital / Clinic)

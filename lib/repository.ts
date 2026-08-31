@@ -33,6 +33,7 @@ export type WebsiteDraftUpdate = {
 export interface FactoryRepository {
   listWebsites(): WebsiteSummary[];
   getWebsite(id: string): Website;
+  upsertWebsite(website: Website): Website;
   createWebsite(input: { name: string; clientName: string; templateId: string }): Website;
   updateDraft(id: string, input: WebsiteDraftUpdate): Website | undefined;
   updateApproval(id: string, approved: boolean): Website | undefined;
@@ -53,19 +54,14 @@ const globalStore = globalThis as unknown as {
 };
 
 if (!globalStore.__factory_websites) {
-  globalStore.__factory_websites = [];
+  globalStore.__factory_websites = [...initialWebsites];
 }
 if (!globalStore.__factory_deployments) {
-  globalStore.__factory_deployments = [];
+  globalStore.__factory_deployments = [...initialDeployments];
 }
 if (!globalStore.__factory_domains) {
-  globalStore.__factory_domains = [];
+  globalStore.__factory_domains = [...initialDomains];
 }
-
-// Reset in-memory arrays to 0 so all items start fresh from scratch
-globalStore.__factory_websites = [];
-globalStore.__factory_deployments = [];
-globalStore.__factory_domains = [];
 
 const websites = globalStore.__factory_websites;
 const deployments = globalStore.__factory_deployments;
@@ -120,6 +116,16 @@ export class DemoFactoryRepository implements FactoryRepository {
       pageData.name = website.name;
       pageData.clientName = website.clientName;
       website.landingPageData = pageData;
+    }
+    return website;
+  }
+
+  upsertWebsite(website: Website): Website {
+    const existingIndex = websites.findIndex((w) => w.id === website.id);
+    if (existingIndex >= 0) {
+      websites[existingIndex] = website;
+    } else {
+      websites.unshift(website);
     }
     return website;
   }
