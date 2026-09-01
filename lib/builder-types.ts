@@ -94,17 +94,23 @@ export interface NavLink {
   href: string;
 }
 
+export type LogoMode = "icon_text" | "text_only" | "icon_only" | "image" | "accent_split";
+
 export interface NavbarSectionData {
   hospitalName: string;
   tagline?: string;
   showTagline?: boolean;
-  logoType?: "icon_text" | "image" | "text_only";
+  logoType?: "icon_text" | "image" | "text_only"; // legacy fallback
+  logoMode?: LogoMode;
   logoUrl?: string;
+  accentWord?: string;
   showEmergencyTopBar?: boolean;
   emergencyPhone?: string;
   ctaText?: string;
   links: NavLink[];
 }
+
+export type HeroVisualMode = "image" | "action_card" | "hotline_box" | "trust_cluster" | "editorial";
 
 export interface HeroSectionData {
   badge?: string;
@@ -115,7 +121,11 @@ export interface HeroSectionData {
   secondaryCta?: string;
   showSecondaryCta?: boolean;
   trustSnippet?: string;
+  visualMode?: HeroVisualMode;
   imageUrl?: string;
+  cardTitle?: string;
+  cardBody?: string;
+  cardCta?: string;
 }
 
 export interface StatItem {
@@ -153,6 +163,7 @@ export interface ServiceItem {
   badge?: string;
   description: string;
   highlights: string[];
+  imageUrl?: string;
 }
 export type ServiceCard = ServiceItem;
 
@@ -276,6 +287,26 @@ export interface ButtonActionConfig {
   variant?: "btn-primary" | "btn-accent" | "btn-outline";
 }
 
+export interface UploadedAssetMeta {
+  key: string;
+  url: string;
+  fileName: string;
+  size: number;
+  mimeType: string;
+  uploadedAt: string;
+}
+
+export interface SiteMediaAssets {
+  faviconUrl?: string;
+  ogImageUrl?: string;
+  heroImageFit?: "cover" | "contain";
+  heroImageRadius?: "none" | "rounded" | "circle";
+  heroImageShadow?: "none" | "subtle" | "glow";
+  heroImageOverlay?: "none" | "dark" | "gradient";
+  heroImageAlt?: string;
+  uploadedAssets?: UploadedAssetMeta[];
+}
+
 export interface LandingPageData {
   id: string;
   name: string;
@@ -289,6 +320,7 @@ export interface LandingPageData {
   publishedAt?: string | null;
   buttonConfigs?: Record<string, ButtonActionConfig>;
   buttonLinks?: Record<string, string>;
+  assets?: SiteMediaAssets;
   seo?: {
     title?: string;
     description?: string;

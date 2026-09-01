@@ -1,5 +1,6 @@
-import { db } from "./firebase";
-import { ref, set, get, child, remove } from "firebase/database";
+import { getAdminDb } from "./firebase-admin";
+import { db as clientDb } from "./firebase";
+import { ref as clientRef, set as clientSet, get as clientGet, child as clientChild, remove as clientRemove } from "firebase/database";
 import type { Website } from "./types";
 import type { LandingPageData } from "./builder-types";
 
@@ -8,11 +9,23 @@ import type { LandingPageData } from "./builder-types";
  * Stored at path: /websites/{websiteId}
  */
 export async function saveWebsiteToFirebase(website: Website): Promise<void> {
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      await adminDb.ref(`websites/${website.id}`).set(website);
+      return;
+    } catch (error) {
+      console.error("[Firebase Admin] Error saving website:", error);
+      throw error;
+    }
+  }
+
+  // Fallback to client SDK if Admin is not initialized
   try {
-    const websiteRef = ref(db, `websites/${website.id}`);
-    await set(websiteRef, website);
+    const websiteRef = clientRef(clientDb, `websites/${website.id}`);
+    await clientSet(websiteRef, website);
   } catch (error) {
-    console.error("Error saving website to Firebase:", error);
+    console.error("Error saving website to Firebase (client fallback):", error);
     throw error;
   }
 }
@@ -25,11 +38,23 @@ export async function saveLandingPageToFirebase(
   websiteId: string,
   pageData: LandingPageData
 ): Promise<void> {
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      await adminDb.ref(`websites/${websiteId}/landingPageData`).set(pageData);
+      return;
+    } catch (error) {
+      console.error("[Firebase Admin] Error saving landing page:", error);
+      throw error;
+    }
+  }
+
+  // Fallback to client SDK
   try {
-    const pageRef = ref(db, `websites/${websiteId}/landingPageData`);
-    await set(pageRef, pageData);
+    const pageRef = clientRef(clientDb, `websites/${websiteId}/landingPageData`);
+    await clientSet(pageRef, pageData);
   } catch (error) {
-    console.error("Error saving landing page to Firebase:", error);
+    console.error("Error saving landing page to Firebase (client fallback):", error);
     throw error;
   }
 }
@@ -40,15 +65,30 @@ export async function saveLandingPageToFirebase(
 export async function getWebsiteFromFirebase(
   id: string
 ): Promise<Website | null> {
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      const snapshot = await adminDb.ref(`websites/${id}`).get();
+      if (snapshot.exists()) {
+        return snapshot.val() as Website;
+      }
+      return null;
+    } catch (error) {
+      console.error("[Firebase Admin] Error fetching website:", error);
+      return null;
+    }
+  }
+
+  // Fallback to client SDK
   try {
-    const dbRef = ref(db);
-    const snapshot = await get(child(dbRef, `websites/${id}`));
+    const dbRef = clientRef(clientDb);
+    const snapshot = await clientGet(clientChild(dbRef, `websites/${id}`));
     if (snapshot.exists()) {
       return snapshot.val() as Website;
     }
     return null;
   } catch (error) {
-    console.error("Error fetching website from Firebase:", error);
+    console.error("Error fetching website from Firebase (client fallback):", error);
     return null;
   }
 }
@@ -57,16 +97,32 @@ export async function getWebsiteFromFirebase(
  * Lists all websites saved in Firebase
  */
 export async function listWebsitesFromFirebase(): Promise<Website[]> {
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      const snapshot = await adminDb.ref("websites").get();
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        return Object.values(data) as Website[];
+      }
+      return [];
+    } catch (error) {
+      console.error("[Firebase Admin] Error listing websites:", error);
+      return [];
+    }
+  }
+
+  // Fallback to client SDK
   try {
-    const dbRef = ref(db);
-    const snapshot = await get(child(dbRef, "websites"));
+    const dbRef = clientRef(clientDb);
+    const snapshot = await clientGet(clientChild(dbRef, "websites"));
     if (snapshot.exists()) {
       const data = snapshot.val();
       return Object.values(data) as Website[];
     }
     return [];
   } catch (error) {
-    console.error("Error listing websites from Firebase:", error);
+    console.error("Error listing websites from Firebase (client fallback):", error);
     return [];
   }
 }
@@ -75,12 +131,24 @@ export async function listWebsitesFromFirebase(): Promise<Website[]> {
  * Deletes a website from Firebase
  */
 export async function deleteWebsiteFromFirebase(id: string): Promise<boolean> {
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      await adminDb.ref(`websites/${id}`).remove();
+      return true;
+    } catch (error) {
+      console.error("[Firebase Admin] Error deleting website:", error);
+      return false;
+    }
+  }
+
+  // Fallback to client SDK
   try {
-    const websiteRef = ref(db, `websites/${id}`);
-    await remove(websiteRef);
+    const websiteRef = clientRef(clientDb, `websites/${id}`);
+    await clientRemove(websiteRef);
     return true;
   } catch (error) {
-    console.error("Error deleting website from Firebase:", error);
+    console.error("Error deleting website from Firebase (client fallback):", error);
     return false;
   }
 }

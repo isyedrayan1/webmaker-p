@@ -83,14 +83,40 @@ export function BuilderCanvas({
       id: site.id,
       theme: site.theme,
       mode: mode,
-      sections: site.sections.map((s) => ({ id: s.id, enabled: s.enabled, order: s.order })),
+      assets: site.assets,
+      sections: site.sections.map((s) => {
+        const d = ((s.data || {}) as unknown) as Record<string, unknown>;
+        return {
+          id: s.id,
+          enabled: s.enabled,
+          order: s.order,
+          type: s.type,
+          logoMode: d.logoMode,
+          logoType: d.logoType,
+          logoUrl: d.logoUrl,
+          accentWord: d.accentWord,
+          visualMode: d.visualMode,
+          imageUrl: d.imageUrl,
+          doctors: Array.isArray(d.doctors)
+            ? (d.doctors as Array<{ id: string; imageUrl?: string }>).map((doc) => ({
+                id: doc.id,
+                imageUrl: doc.imageUrl,
+              }))
+            : undefined,
+          services: Array.isArray(d.services)
+            ? (d.services as Array<{ id: string; imageUrl?: string }>).map((srv) => ({
+                id: srv.id,
+                imageUrl: srv.imageUrl,
+              }))
+            : undefined,
+        };
+      }),
     });
-  }, [site.id, site.theme, mode, site.sections]);
+  }, [site.id, site.theme, mode, site.sections, site.assets]);
 
   const compiledHtml = useMemo(() => {
     return compileLandingPageToHtml(site, isEditable);
-    // In edit mode we rely on direct DOM typing + structural updates.
-    // In preview mode we compile the full live site with all edited text content!
+    // In edit mode we re-compile whenever structural or visual media properties change!
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode === "preview" ? site : structuralKey, isEditable]);
 
@@ -232,7 +258,7 @@ export function BuilderCanvas({
     return (
       <div className="w-full h-full min-h-[calc(100vh-64px)] bg-white flex-1 relative overflow-hidden">
         <iframe
-          key={`${site.id}-edit-${site.theme}`}
+          key={`${site.id}-edit-${structuralKey}`}
           ref={iframeRef}
           srcDoc={compiledHtml}
           title="Live Studio Builder Canvas"
@@ -295,7 +321,7 @@ export function BuilderCanvas({
           }}
         >
           <iframe
-            key={`${site.id}-preview-${previewDevice}-${site.theme}`}
+            key={`${site.id}-preview-${previewDevice}-${structuralKey}`}
             ref={iframeRef}
             srcDoc={compiledHtml}
             onLoad={() => {

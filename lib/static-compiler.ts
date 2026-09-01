@@ -101,7 +101,7 @@ function renderHero(
   );
   const cardBtn = resolveButtonProps(
     "hero.cardCta",
-    "Schedule Visit Today",
+    hero.cardCta || "Schedule Visit Today",
     "#booking",
     "btn-accent",
     site
@@ -109,13 +109,78 @@ function renderHero(
 
   const showBadge = hero.showBadge !== false && (hero.badge || editAttr);
   const showSecondary = hero.showSecondaryCta !== false && (hero.secondaryCta || editAttr);
+  const visualMode = hero.visualMode || (hero.imageUrl ? "image" : "action_card");
+
+  let visualColumnHtml = "";
+  if (visualMode === "image") {
+    const fit = site?.assets?.heroImageFit || "cover";
+    const radius = site?.assets?.heroImageRadius === "none" ? "0px" : site?.assets?.heroImageRadius === "circle" ? "9999px" : "2rem";
+    const shadow = site?.assets?.heroImageShadow === "none" ? "none" : site?.assets?.heroImageShadow === "glow" ? "0 20px 50px rgba(40, 84, 89, 0.22)" : "0 20px 40px rgba(0,0,0,0.05)";
+    const altText = site?.assets?.heroImageAlt || hero.headline || "Clinic";
+
+    visualColumnHtml = `
+        <div style="background-color: #ffffff; border: 1px solid var(--border-light); border-radius: ${radius}; overflow: hidden; box-shadow: ${shadow}; align-self: start; position: sticky; top: 5.5rem; width: 100%;">
+          <img src="${escapeHtml(hero.imageUrl || "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80")}" alt="${escapeHtml(altText)}" style="width: 100%; height: 380px; object-fit: ${fit}; display: block; border-radius: ${radius};" />
+        </div>`;
+  } else if (visualMode === "hotline_box") {
+    visualColumnHtml = `
+        <div style="background-color: #ffffff; border: 1px solid var(--border-light); border-left: 6px solid var(--primary); border-radius: 2rem; padding: 2.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.05); align-self: start; position: sticky; top: 5.5rem; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <span style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; display: inline-block;"></span>
+            <strong style="color: #10b981; font-size: 0.85rem; text-transform: uppercase; font-family: var(--font-mono);">Open Now · Accepting Walk-ins</strong>
+          </div>
+          <h3 class="font-serif" style="font-size: 2rem; margin-bottom: 0.5rem;">24/7 Urgent Triage</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">On-call physicians and emergency triage available around the clock with zero waiting lines.</p>
+          <a href="${cardBtn.href}" ${cardBtn.targetAttr} data-btn-id="hero.cardCta" class="btn ${cardBtn.variantClass}" style="width: 100%;">${escapeHtml(cardBtn.label)}</a>
+        </div>`;
+  } else if (visualMode === "trust_cluster") {
+    visualColumnHtml = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; align-self: start; position: sticky; top: 5.5rem; width: 100%;">
+          <div class="card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 44px; height: 44px; background: rgba(0,0,0,0.04); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;">${ICONS.star}</div>
+            <div>
+              <strong style="font-size: 1.05rem; display: block;">4.95 / 5.0 Star Rating</strong>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Verified patient satisfaction</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 44px; height: 44px; background: rgba(0,0,0,0.04); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;">${ICONS.shield}</div>
+            <div>
+              <strong style="font-size: 1.05rem; display: block;">Board-Certified Specialists</strong>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Evidence-based medical care</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 44px; height: 44px; background: rgba(0,0,0,0.04); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;">${ICONS.clock}</div>
+            <div>
+              <strong style="font-size: 1.05rem; display: block;">Zero Waiting Times</strong>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Same-day appointment slots</span>
+            </div>
+          </div>
+        </div>`;
+  } else if (visualMode === "editorial") {
+    visualColumnHtml = "";
+  } else {
+    // Default: action_card
+    visualColumnHtml = `
+        <div style="background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 2rem; padding: 2.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center; align-self: start; position: sticky; top: 5.5rem; width: 100%;">
+          <div style="width: 70px; height: 70px; aspect-ratio: 1/1; background: rgba(0,0,0,0.04); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: var(--primary);">
+            ${ICONS.stethoscope}
+          </div>
+          <h3 class="font-serif" style="font-size: 2rem; margin-bottom: 0.5rem;" ${editAttr} data-field="hero.cardTitle">${escapeHtml(hero.cardTitle || "Care When You Need It")}</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;" ${editAttr} data-field="hero.cardBody">${escapeHtml(hero.cardBody || "Same-day urgent appointments, direct specialist consultations, and rapid testing.")}</p>
+          <a href="${cardBtn.href}" ${cardBtn.targetAttr} data-btn-id="hero.cardCta" class="btn ${cardBtn.variantClass}" style="width: 100%;">${escapeHtml(cardBtn.label)}</a>
+        </div>`;
+  }
+
+  const isEditorial = visualMode === "editorial";
 
   return `
   <!-- HERO SECTION -->
   <section id="hero" style="background: linear-gradient(180deg, var(--bg-light) 0%, rgba(255,255,255,0.7) 100%); border-bottom: 1px solid var(--border-light);">
     <div class="container">
-      <div class="grid-hero" style="align-items: start;">
-        <div style="min-width: 0; display: flex; flex-direction: column; align-items: flex-start;">
+      <div class="${isEditorial ? "" : "grid-hero"}" style="align-items: start; ${isEditorial ? "max-width: 800px; margin: 0 auto; text-align: center;" : ""}">
+        <div style="min-width: 0; display: flex; flex-direction: column; ${isEditorial ? "align-items: center;" : "align-items: flex-start;"}">
           ${
             showBadge
               ? `<div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 9999px; background-color: rgba(0,0,0,0.04); border: 1px solid var(--border-light); font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-bottom: 1.25rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -129,7 +194,7 @@ function renderHero(
           <p class="section-desc" style="margin-bottom: 1.75rem; max-width: 65ch; white-space: pre-line; word-break: break-word; overflow-wrap: break-word;" ${editAttr} data-field="hero.subheadline">
             ${escapeHtml(hero.subheadline || "Compassionate, high-precision medical care backed by board-certified specialists.")}
           </p>
-          <div class="hero-cta-group" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+          <div class="hero-cta-group" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; ${isEditorial ? "justify-content: center;" : ""}">
             <a href="${primaryBtn.href}" ${primaryBtn.targetAttr} data-btn-id="hero.primaryCta" class="btn ${primaryBtn.variantClass}" style="padding: 0.9rem 2rem; font-size: 1rem;" ${editAttr} data-field="hero.primaryCta">${escapeHtml(primaryBtn.label)}</a>
             ${
               showSecondary
@@ -146,14 +211,7 @@ function renderHero(
           }
         </div>
 
-        <div style="background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 2rem; padding: 2.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center; align-self: start; position: sticky; top: 5.5rem; width: 100%;">
-          <div style="width: 70px; height: 70px; aspect-ratio: 1/1; background: rgba(0,0,0,0.04); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: var(--primary);">
-            ${ICONS.stethoscope}
-          </div>
-          <h3 class="font-serif" style="font-size: 2rem; margin-bottom: 0.5rem;">Care When You Need It</h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">Same-day urgent appointments, direct specialist consultations, and rapid testing.</p>
-          <a href="${cardBtn.href}" ${cardBtn.targetAttr} data-btn-id="hero.cardCta" class="btn ${cardBtn.variantClass}" style="width: 100%;">${escapeHtml(cardBtn.label)}</a>
-        </div>
+        ${visualColumnHtml}
       </div>
     </div>
   </section>`;
@@ -295,7 +353,7 @@ function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string): 
             ${
               doc.imageUrl
                 ? `<img src="${escapeHtml(doc.imageUrl)}" alt="${escapeHtml(doc.name)}" class="card-doctor-avatar" style="object-fit: cover;" />`
-                : `<div class="card-doctor-avatar">${escapeHtml((doc.name || "D").replace("Dr. ", "").slice(0, 1))}</div>`
+                : ""
             }
             <h3 style="font-size: 1.25rem; font-weight: 700; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.name">${escapeHtml(doc.name)}</h3>
             <p style="color: var(--primary); font-weight: 600; font-size: 0.85rem; margin-top: 0.25rem; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.role">${escapeHtml(doc.role)}</p>
@@ -603,6 +661,8 @@ export function compileLandingPageToHtml(
   <meta name="description" id="pageMetaDescTag" content="${escapeHtml(pageDescription)}">
   <meta property="og:title" content="${escapeHtml(pageTitle)}">
   <meta property="og:description" content="${escapeHtml(pageDescription)}">
+  ${safeSite.assets?.ogImageUrl ? `<meta property="og:image" content="${escapeHtml(safeSite.assets.ogImageUrl)}">\n  <meta name="twitter:card" content="summary_large_image">` : ""}
+  ${safeSite.assets?.faviconUrl ? `<link rel="icon" href="${escapeHtml(safeSite.assets.faviconUrl)}">` : `<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><text y=%2220%22 font-size=%2220%22>🏥</text></svg>">`}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -822,20 +882,35 @@ export function compileLandingPageToHtml(
         <!-- Clinic Brand: Non-navigating element -->
         <div class="navbar-brand">
           ${
-            navbar.logoType === "image" && navbar.logoUrl
-              ? `<img src="${escapeHtml(navbar.logoUrl)}" alt="${escapeHtml(navbar.hospitalName || safeSite.name)}" style="height: 38px; width: auto; max-width: 160px; object-fit: contain; flex-shrink: 0;" />`
-              : navbar.logoType === "text_only"
+            (navbar.logoMode === "image" || navbar.logoType === "image") && navbar.logoUrl
+              ? `<img src="${escapeHtml(navbar.logoUrl)}" alt="${escapeHtml(navbar.hospitalName || safeSite.name)}" style="height: 38px; width: auto; max-width: 180px; object-fit: contain; flex-shrink: 0;" />`
+              : navbar.logoMode === "icon_only"
+              ? `<div class="brand-logo">+</div>`
+              : navbar.logoMode === "text_only" || navbar.logoType === "text_only"
               ? ""
               : `<div class="brand-logo">+</div>`
           }
-          <div style="min-width: 0;">
-            <span class="brand-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="navbar.hospitalName">${escapeHtml(navbar.hospitalName || safeSite.name)}</span>
+          ${
+            navbar.logoMode !== "icon_only"
+              ? `<div style="min-width: 0;">
+            <span class="brand-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="navbar.hospitalName">
+              ${
+                navbar.logoMode === "accent_split" && navbar.accentWord
+                  ? escapeHtml(navbar.hospitalName || safeSite.name).replace(
+                      new RegExp(`(${escapeHtml(navbar.accentWord)})`, "i"),
+                      `<span style="color: var(--accent); font-weight: 800;">$1</span>`
+                    )
+                  : escapeHtml(navbar.hospitalName || safeSite.name)
+              }
+            </span>
             ${
               navbar.showTagline !== false && (navbar.tagline || editAttr)
                 ? `<span class="brand-tagline" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="navbar.tagline">${escapeHtml(navbar.tagline || "Medical Center")}</span>`
                 : ""
             }
-          </div>
+          </div>`
+              : ""
+          }
         </div>
 
         <!-- Desktop Nav -->

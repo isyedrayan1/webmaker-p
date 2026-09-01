@@ -49,6 +49,8 @@ import {
   Tablet,
   Undo2,
   X,
+  Image as ImageIcon,
+  User,
 } from "lucide-react";
 import type { Website, WebsiteSummary } from "@/lib/types";
 import {
@@ -58,8 +60,16 @@ import {
   type LandingPageData,
   type SectionBlock,
   type ThemeColor,
+  type LogoMode,
+  type HeroVisualMode,
+  type NavbarSectionData,
+  type HeroSectionData,
+  type DoctorsSectionData,
 } from "@/lib/builder-types";
 import { exportLandingPageAsZip } from "@/lib/zip-exporter";
+import { ImageUploadModal } from "@/components/canvas/ImageUploadModal";
+import { HeroVisualPicker, LogoModePicker } from "@/components/canvas/ContainerVisualPicker";
+import { AssetManagerDrawer } from "@/components/canvas/AssetManagerDrawer";
 import { toast } from "sonner";
 
 export type SyncStatus = "saved" | "unsaved" | "saving" | "error";
@@ -75,43 +85,67 @@ interface ConfigurableButtonMeta {
 
 const PAGE_BUTTONS_REGISTRY: ConfigurableButtonMeta[] = [
   {
+    id: "navbar.cta",
+    defaultLabel: "Book Visit",
+    sectionName: "Navigation Bar",
+    defaultActionType: "section",
+    defaultTarget: "#booking",
+    defaultVariant: "btn-primary",
+  },
+  {
     id: "hero.primaryCta",
-    defaultLabel: "Schedule a Consultation",
-    sectionName: "Hero Banner",
+    defaultLabel: "Book Appointment",
+    sectionName: "Hero Header",
     defaultActionType: "section",
     defaultTarget: "#booking",
     defaultVariant: "btn-primary",
   },
   {
     id: "hero.secondaryCta",
-    defaultLabel: "Explore Specialties",
-    sectionName: "Hero Banner",
-    defaultActionType: "section",
-    defaultTarget: "#services",
+    defaultLabel: "Emergency Care",
+    sectionName: "Hero Header",
+    defaultActionType: "phone",
+    defaultTarget: "+1 (800) 427-2673",
     defaultVariant: "btn-outline",
   },
   {
     id: "hero.cardCta",
-    defaultLabel: "Schedule Visit Today",
-    sectionName: "Hero Info Card",
+    defaultLabel: "Confirm Time",
+    sectionName: "Hero Appointment Card",
     defaultActionType: "section",
     defaultTarget: "#booking",
-    defaultVariant: "btn-accent",
+    defaultVariant: "btn-primary",
   },
   {
-    id: "navbar.cta",
-    defaultLabel: "Book Appointment",
-    sectionName: "Header Navigation",
+    id: "services.cta",
+    defaultLabel: "Consult a Specialist",
+    sectionName: "Clinical Services",
     defaultActionType: "section",
+    defaultTarget: "#booking",
+    defaultVariant: "btn-primary",
+  },
+  {
+    id: "doctors.cta",
+    defaultLabel: "View All 18 Specialists",
+    sectionName: "Medical Staff",
+    defaultActionType: "url",
     defaultTarget: "#booking",
     defaultVariant: "btn-primary",
   },
   {
     id: "booking.submit",
     defaultLabel: "Submit Request",
-    sectionName: "Appointment Form",
+    sectionName: "Direct Booking Form",
     defaultActionType: "section",
-    defaultTarget: "#",
+    defaultTarget: "#booking",
+    defaultVariant: "btn-primary",
+  },
+  {
+    id: "footer.portal",
+    defaultLabel: "Patient Portal Login",
+    sectionName: "Footer",
+    defaultActionType: "url",
+    defaultTarget: "https://myhealth-portal.org",
     defaultVariant: "btn-primary",
   },
 ];
@@ -134,7 +168,20 @@ export default function WebsiteEditorPage({
   const [mode, setMode] = useState<BuilderMode>("edit");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [showToolsPanel, setShowToolsPanel] = useState(false);
-  const [activeTab, setActiveTab] = useState<"layout" | "buttons" | "seo">("layout");
+  const [showAssetDrawer, setShowAssetDrawer] = useState(false);
+  const [activeTab, setActiveTab] = useState<"layout" | "media" | "buttons" | "seo">("layout");
+
+  // Media & Upload Modal State
+  const [uploadModal, setUploadModal] = useState<{
+    isOpen: boolean;
+    target: "logo" | "hero" | { type: "doctor"; id: string };
+    currentUrl?: string;
+    title: string;
+  }>({
+    isOpen: false,
+    target: "logo",
+    title: "Upload Image",
+  });
 
   // History State Engine (Real Undo & Redo)
   const [historyPast, setHistoryPast] = useState<LandingPageData[]>([]);
@@ -547,6 +594,136 @@ export default function WebsiteEditorPage({
     if (!pageData) return;
     const currentSeo = pageData.seo || {};
     pushToHistory({ ...pageData, seo: { ...currentSeo, [key]: val } });
+  };
+
+  // Visual Media & Logo Handlers
+  const handleUpdateNavbarLogo = (logoMode: LogoMode, logoUrl?: string, accentWord?: string) => {
+    if (!pageData) return;
+    const resolvedLogoType: "icon_text" | "image" | "text_only" =
+      logoMode === "image" ? "image" : logoMode === "text_only" ? "text_only" : "icon_text";
+
+    const updatedSections = pageData.sections.map((sec) => {
+      if (sec.type === "navbar") {
+        return {
+          ...sec,
+          data: {
+            ...sec.data,
+            logoMode,
+            logoType: resolvedLogoType,
+            ...(logoUrl !== undefined ? { logoUrl } : {}),
+            ...(accentWord !== undefined ? { accentWord } : {}),
+          },
+        };
+      }
+      return sec;
+    });
+    pushToHistory({ ...pageData, sections: updatedSections });
+  };
+
+  const handleUpdateHeroVisual = (visualMode: HeroVisualMode, imageUrl?: string) => {
+    if (!pageData) return;
+    const updatedSections = pageData.sections.map((sec) => {
+      if (sec.type === "hero") {
+        return {
+          ...sec,
+          data: {
+            ...sec.data,
+            visualMode,
+            ...(imageUrl !== undefined ? { imageUrl } : {}),
+          },
+        };
+      }
+      return sec;
+    });
+    pushToHistory({ ...pageData, sections: updatedSections });
+  };
+
+  const handleUpdateDoctorImage = (docId: string, imageUrl?: string) => {
+    if (!pageData) return;
+    const updatedSections = pageData.sections.map((sec) => {
+      if (sec.type === "doctors" && "doctors" in sec.data && Array.isArray(sec.data.doctors)) {
+        const updatedDoctors = sec.data.doctors.map((doc) => {
+          if (doc.id === docId) {
+            return { ...doc, imageUrl: imageUrl || undefined };
+          }
+          return doc;
+        });
+        return { ...sec, data: { ...sec.data, doctors: updatedDoctors } };
+      }
+      return sec;
+    });
+    pushToHistory({ ...pageData, sections: updatedSections });
+  };
+
+  const handleLoadStockPreset = () => {
+    if (!pageData) return;
+    const stockHero = "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1200&q=80";
+    const stockDocs = [
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1594824813589-39744c8dc644?auto=format&fit=crop&w=600&q=80",
+    ];
+
+    const updated = pageData.sections.map((sec) => {
+      if (sec.type === "hero") {
+        return {
+          ...sec,
+          data: { ...sec.data, visualMode: "image" as HeroVisualMode, imageUrl: stockHero },
+        };
+      }
+      if (sec.type === "doctors" && "doctors" in sec.data && Array.isArray(sec.data.doctors)) {
+        const docs = sec.data.doctors.map((doc, idx) => ({
+          ...doc,
+          imageUrl: stockDocs[idx % stockDocs.length],
+        }));
+        return { ...sec, data: { ...sec.data, doctors: docs } };
+      }
+      return sec;
+    });
+
+    pushToHistory({ ...pageData, sections: updated });
+    toast.success("Loaded demo medical photography!");
+  };
+
+  const handleClearAllImages = () => {
+    if (!pageData) return;
+    const updated = pageData.sections.map((sec) => {
+      if (sec.type === "navbar") {
+        return {
+          ...sec,
+          data: {
+            ...sec.data,
+            logoMode: "icon_text" as LogoMode,
+            logoType: "icon_text" as const,
+            logoUrl: undefined,
+          },
+        };
+      }
+      if (sec.type === "hero") {
+        return {
+          ...sec,
+          data: { ...sec.data, visualMode: "action_card" as HeroVisualMode, imageUrl: undefined },
+        };
+      }
+      if (sec.type === "doctors" && "doctors" in sec.data && Array.isArray(sec.data.doctors)) {
+        const docs = sec.data.doctors.map((doc) => ({
+          ...doc,
+          imageUrl: undefined,
+        }));
+        return { ...sec, data: { ...sec.data, doctors: docs } };
+      }
+      if (sec.type === "services" && "services" in sec.data && Array.isArray(sec.data.services)) {
+        const srvs = sec.data.services.map((srv) => ({
+          ...srv,
+          imageUrl: undefined,
+        }));
+        return { ...sec, data: { ...sec.data, services: srvs } };
+      }
+      return sec;
+    });
+
+    pushToHistory({ ...pageData, sections: updated });
+    toast.success("Zero-image text mode applied. All cards reset cleanly!");
   };
 
   if (loading) {
@@ -1026,15 +1203,40 @@ export default function WebsiteEditorPage({
                 )}
               </button>
 
-              {/* Customize Sections Slide-Over Button */}
+              {/* Media Vault Button */}
               <button
-                onClick={() => setShowToolsPanel(!showToolsPanel)}
+                onClick={() => {
+                  setShowAssetDrawer(!showAssetDrawer);
+                  if (showToolsPanel) setShowToolsPanel(false);
+                }}
+                className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold shadow-2xs transition cursor-pointer ${
+                  showAssetDrawer
+                    ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))]"
+                    : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
+                }`}
+                title="Open Cloudflare R2 Media Vault"
+              >
+                <ImageIcon size={14} className="text-[hsl(var(--primary))]" />
+                <span className="hidden sm:inline">Vault</span>
+                {pageData?.assets?.uploadedAssets && pageData.assets.uploadedAssets.length > 0 && (
+                  <span className="rounded-full bg-[hsl(var(--primary))] text-white text-[9px] px-1.5 py-0.2 font-mono-app">
+                    {pageData.assets.uploadedAssets.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Customize Slide-Over Button */}
+              <button
+                onClick={() => {
+                  setShowToolsPanel(!showToolsPanel);
+                  if (showAssetDrawer) setShowAssetDrawer(false);
+                }}
                 className={`flex h-9 items-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold shadow-2xs transition cursor-pointer ${
                   showToolsPanel
                     ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))]"
                     : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
                 }`}
-                title="Customize Theme, Sections, Buttons, and SEO"
+                title="Customize Theme, Media, Buttons, and SEO"
               >
                 <Layers size={14} />
                 <span className="hidden sm:inline">Customize</span>
@@ -1161,7 +1363,7 @@ export default function WebsiteEditorPage({
                 </button>
               </div>
 
-              {/* 3 Studio Tabs */}
+              {/* 4 Studio Tabs */}
               <div className="flex items-center rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-1 shadow-2xs">
                 <button
                   onClick={() => setActiveTab("layout")}
@@ -1173,6 +1375,17 @@ export default function WebsiteEditorPage({
                 >
                   <Palette size={13} />
                   <span>Layout</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("media")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium cursor-pointer transition ${
+                    activeTab === "media"
+                      ? "bg-[hsl(var(--primary))] text-white shadow-xs font-semibold"
+                      : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  }`}
+                >
+                  <ImageIcon size={13} />
+                  <span>Media</span>
                 </button>
                 <button
                   onClick={() => setActiveTab("buttons")}
@@ -1292,7 +1505,416 @@ export default function WebsiteEditorPage({
                 </>
               )}
 
-              {/* ================= TAB 2: ADVANCED BUTTONS & ACTIONS INSPECTOR ================= */}
+              {/* ================= TAB 2: BRANDING & VISUAL MEDIA ================= */}
+              {activeTab === "media" && (
+                <div className="space-y-4">
+                  {/* 1. Brand Logo Display Mode */}
+                  {pageData.sections.find((s) => s.type === "navbar") && (() => {
+                    const navData = (pageData.sections.find((s) => s.type === "navbar")?.data || {}) as NavbarSectionData;
+                    return (
+                      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3.5 shadow-xs space-y-3">
+                        <LogoModePicker
+                          currentMode={
+                            (navData.logoMode as LogoMode) ||
+                            (navData.logoType === "image"
+                              ? "image"
+                              : navData.logoType === "text_only"
+                              ? "text_only"
+                              : "icon_text")
+                          }
+                          onChange={(mode) =>
+                            handleUpdateNavbarLogo(mode, navData.logoUrl, navData.accentWord)
+                          }
+                          onOpenLogoUpload={() =>
+                            setUploadModal({
+                              isOpen: true,
+                              target: "logo",
+                              currentUrl: navData.logoUrl,
+                              title: "Upload Brand Logo (PNG / SVG)",
+                            })
+                          }
+                        />
+
+                        {/* Custom Logo Upload / Preview Card */}
+                        {(navData.logoMode === "image" || navData.logoType === "image") && (
+                          <div className="p-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold">Custom Logo File</span>
+                              {navData.logoUrl && (
+                                <button
+                                  onClick={() => handleUpdateNavbarLogo("icon_text", undefined)}
+                                  className="text-[11px] text-red-500 hover:underline cursor-pointer"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            {navData.logoUrl ? (
+                              <div className="flex items-center gap-3 p-2 rounded-lg bg-[hsl(var(--muted)/.4)] border border-[hsl(var(--border))]">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={navData.logoUrl}
+                                  alt="Logo Preview"
+                                  className="h-8 max-w-[120px] object-contain"
+                                />
+                                <button
+                                  onClick={() =>
+                                    setUploadModal({
+                                      isOpen: true,
+                                      target: "logo",
+                                      currentUrl: navData.logoUrl,
+                                      title: "Change Brand Logo",
+                                    })
+                                  }
+                                  className="text-xs text-[hsl(var(--primary))] font-semibold hover:underline ml-auto cursor-pointer"
+                                >
+                                  Replace
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  setUploadModal({
+                                    isOpen: true,
+                                    target: "logo",
+                                    title: "Upload Brand Logo",
+                                  })
+                                }
+                                className="w-full py-2.5 rounded-xl border border-dashed border-[hsl(var(--primary))] text-[hsl(var(--primary))] text-xs font-semibold hover:bg-[hsl(var(--primary)/.05)] transition flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <ImageIcon size={14} /> Upload Logo File
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Accent Split highlighted word input */}
+                        {navData.logoMode === "accent_split" && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-mono-app uppercase text-[hsl(var(--muted-foreground))]">
+                              Highlighted Syllable / Word
+                            </label>
+                            <input
+                              type="text"
+                              value={navData.accentWord || ""}
+                              placeholder="e.g. Care or View"
+                              onChange={(e) =>
+                                handleUpdateNavbarLogo(
+                                  "accent_split",
+                                  navData.logoUrl,
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-1.5 text-xs font-medium focus:border-[hsl(var(--primary))] outline-none"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 2. Hero Right Column Visual Mode */}
+                  {pageData.sections.find((s) => s.type === "hero") && (() => {
+                    const hData = (pageData.sections.find((s) => s.type === "hero")?.data || {}) as HeroSectionData;
+                    return (
+                      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3.5 shadow-xs space-y-3">
+                        <HeroVisualPicker
+                          currentMode={
+                            (hData.visualMode as HeroVisualMode) ||
+                            (hData.imageUrl ? "image" : "action_card")
+                          }
+                          onChange={(mode) => handleUpdateHeroVisual(mode, hData.imageUrl)}
+                          onOpenImageUpload={() =>
+                            setUploadModal({
+                              isOpen: true,
+                              target: "hero",
+                              currentUrl: hData.imageUrl,
+                              title: "Upload Hero Banner Image",
+                            })
+                          }
+                        />
+
+                        {/* Custom Hero Image Upload / Preview Card */}
+                        {hData.visualMode === "image" && (
+                          <div className="p-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold">Hero Banner Image</span>
+                              {hData.imageUrl && (
+                                <button
+                                  onClick={() => handleUpdateHeroVisual("action_card", undefined)}
+                                  className="text-[11px] text-red-500 hover:underline cursor-pointer"
+                                >
+                                  Remove Image
+                                </button>
+                              )}
+                            </div>
+                            {hData.imageUrl ? (
+                              <div className="space-y-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={hData.imageUrl}
+                                  alt="Hero Banner"
+                                  className="w-full h-24 object-cover rounded-lg border border-[hsl(var(--border))]"
+                                />
+                                <button
+                                  onClick={() =>
+                                    setUploadModal({
+                                      isOpen: true,
+                                      target: "hero",
+                                      currentUrl: hData.imageUrl,
+                                      title: "Change Hero Image",
+                                    })
+                                  }
+                                  className="w-full py-1.5 text-xs text-[hsl(var(--primary))] font-semibold hover:bg-[hsl(var(--primary)/.08)] rounded-lg transition cursor-pointer"
+                                >
+                                  Replace Image
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  setUploadModal({
+                                    isOpen: true,
+                                    target: "hero",
+                                    title: "Upload Hero Image",
+                                  })
+                                }
+                                className="w-full py-2.5 rounded-xl border border-dashed border-[hsl(var(--primary))] text-[hsl(var(--primary))] text-xs font-semibold hover:bg-[hsl(var(--primary)/.05)] transition flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <ImageIcon size={14} /> Upload Hero Image File
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Image Styling & Fit Controls */}
+                        {hData.visualMode === "image" && hData.imageUrl && (
+                          <div className="p-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] space-y-3">
+                            <span className="text-[11px] font-bold uppercase tracking-wider font-mono-app text-[hsl(var(--muted-foreground))] block">
+                              Hero Image Styling
+                            </span>
+
+                            {/* Fit Mode */}
+                            <div>
+                              <label className="text-[10px] font-mono-app uppercase text-[hsl(var(--muted-foreground))] block mb-1">
+                                Object Fit
+                              </label>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                <button
+                                  onClick={() => {
+                                    const assets = pageData.assets || {};
+                                    pushToHistory({ ...pageData, assets: { ...assets, heroImageFit: "cover" } });
+                                  }}
+                                  className={`py-1.5 rounded-lg border text-center font-semibold transition cursor-pointer ${
+                                    pageData.assets?.heroImageFit !== "contain"
+                                      ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.08)] text-[hsl(var(--primary))]"
+                                      : "border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]"
+                                  }`}
+                                >
+                                  Cover (Crop)
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const assets = pageData.assets || {};
+                                    pushToHistory({ ...pageData, assets: { ...assets, heroImageFit: "contain" } });
+                                  }}
+                                  className={`py-1.5 rounded-lg border text-center font-semibold transition cursor-pointer ${
+                                    pageData.assets?.heroImageFit === "contain"
+                                      ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.08)] text-[hsl(var(--primary))]"
+                                      : "border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]"
+                                  }`}
+                                >
+                                  Contain (Full)
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Corner Radius */}
+                            <div>
+                              <label className="text-[10px] font-mono-app uppercase text-[hsl(var(--muted-foreground))] block mb-1">
+                                Corner Radius
+                              </label>
+                              <div className="grid grid-cols-3 gap-1 text-xs">
+                                <button
+                                  onClick={() => {
+                                    const assets = pageData.assets || {};
+                                    pushToHistory({ ...pageData, assets: { ...assets, heroImageRadius: "rounded" } });
+                                  }}
+                                  className={`py-1 rounded-lg border text-center font-semibold transition cursor-pointer ${
+                                    pageData.assets?.heroImageRadius !== "none" && pageData.assets?.heroImageRadius !== "circle"
+                                      ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.08)] text-[hsl(var(--primary))]"
+                                      : "border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]"
+                                  }`}
+                                >
+                                  Smooth
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const assets = pageData.assets || {};
+                                    pushToHistory({ ...pageData, assets: { ...assets, heroImageRadius: "none" } });
+                                  }}
+                                  className={`py-1 rounded-lg border text-center font-semibold transition cursor-pointer ${
+                                    pageData.assets?.heroImageRadius === "none"
+                                      ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.08)] text-[hsl(var(--primary))]"
+                                      : "border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]"
+                                  }`}
+                                >
+                                  Sharp
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const assets = pageData.assets || {};
+                                    pushToHistory({ ...pageData, assets: { ...assets, heroImageRadius: "circle" } });
+                                  }}
+                                  className={`py-1 rounded-lg border text-center font-semibold transition cursor-pointer ${
+                                    pageData.assets?.heroImageRadius === "circle"
+                                      ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.08)] text-[hsl(var(--primary))]"
+                                      : "border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]"
+                                  }`}
+                                >
+                                  Circle
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Alt Text (SEO) */}
+                            <div>
+                              <label className="text-[10px] font-mono-app uppercase text-[hsl(var(--muted-foreground))] block mb-1">
+                                Alt Text (SEO)
+                              </label>
+                              <input
+                                type="text"
+                                value={pageData.assets?.heroImageAlt || ""}
+                                placeholder="e.g. Modern reception lobby and exam room"
+                                onChange={(e) => {
+                                  const assets = pageData.assets || {};
+                                  pushToHistory({ ...pageData, assets: { ...assets, heroImageAlt: e.target.value } });
+                                }}
+                                className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-xs font-medium focus:border-[hsl(var(--primary))] outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 3. Doctors Medical Roster Photos */}
+                  {(() => {
+                    const docSec = pageData.sections.find((s) => s.type === "doctors");
+                    const docData = (docSec?.data || {}) as DoctorsSectionData;
+                    if (!docData.doctors || docData.doctors.length === 0) return null;
+
+                    return (
+                      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3.5 shadow-xs space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider font-mono-app">
+                            Doctor Profile Photos
+                          </span>
+                          <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono-app">
+                            {docData.doctors.length} Doctors
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {docData.doctors.map((doc) => (
+                            <div
+                              key={doc.id}
+                              className="flex items-center justify-between p-2.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] gap-2"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {doc.imageUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={doc.imageUrl}
+                                    alt={doc.name}
+                                    className="w-9 h-9 rounded-full object-cover border border-[hsl(var(--border))] shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] flex items-center justify-center font-bold text-xs shrink-0">
+                                    <User size={15} />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <span className="text-xs font-semibold block truncate">
+                                    {doc.name}
+                                  </span>
+                                  <span className="text-[10px] text-[hsl(var(--muted-foreground))] block truncate font-mono-app">
+                                    {doc.role}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() =>
+                                    setUploadModal({
+                                      isOpen: true,
+                                      target: { type: "doctor", id: doc.id },
+                                      currentUrl: doc.imageUrl,
+                                      title: `Photo for ${doc.name}`,
+                                    })
+                                  }
+                                  className="px-2 py-1 text-[11px] font-semibold text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/.1)] rounded-lg transition cursor-pointer"
+                                >
+                                  {doc.imageUrl ? "Change" : "Add Photo"}
+                                </button>
+                                {doc.imageUrl && (
+                                  <button
+                                    onClick={() => handleUpdateDoctorImage(doc.id, undefined)}
+                                    className="p-1 text-[hsl(var(--muted-foreground))] hover:text-red-500 rounded-md transition cursor-pointer"
+                                    title="Remove photo (clean text card will be shown)"
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 4. 1-Click Agency Presets */}
+                  <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3.5 shadow-xs space-y-2.5">
+                    <div className="flex items-center gap-1.5 text-[hsl(var(--primary))]">
+                      <Sparkles size={14} />
+                      <span className="text-[11px] font-bold uppercase tracking-wider font-mono-app">
+                        Quick Layout Presets
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handleLoadStockPreset}
+                        className="p-2.5 rounded-xl border border-[hsl(var(--primary)/.4)] bg-[hsl(var(--primary)/.05)] hover:bg-[hsl(var(--primary)/.1)] text-left transition cursor-pointer"
+                      >
+                        <strong className="text-xs font-bold text-[hsl(var(--primary))] block">
+                          Demo Photos
+                        </strong>
+                        <span className="text-[10px] text-[hsl(var(--muted-foreground))] block mt-0.5">
+                          Load high-res stock photography
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={handleClearAllImages}
+                        className="p-2.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-red-500/5 hover:border-red-500/30 text-left transition cursor-pointer"
+                      >
+                        <strong className="text-xs font-bold text-[hsl(var(--foreground))] block">
+                          Clean Text Mode
+                        </strong>
+                        <span className="text-[10px] text-[hsl(var(--muted-foreground))] block mt-0.5">
+                          Reset cards to minimal text layout
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= TAB 3: ADVANCED BUTTONS & ACTIONS INSPECTOR ================= */}
               {activeTab === "buttons" && (
                 <div className="space-y-4">
                   {/* Select Button on Page Dropdown */}
@@ -1676,7 +2298,48 @@ export default function WebsiteEditorPage({
             </div>
           </aside>
         )}
+
+        {/* ================= CLOUDFLARE R2 MEDIA VAULT DRAWER ================= */}
+        {pageData && (
+          <AssetManagerDrawer
+            isOpen={showAssetDrawer && mode === "edit"}
+            onClose={() => setShowAssetDrawer(false)}
+            site={pageData}
+            onChange={(updated) => pushToHistory(updated)}
+          />
+        )}
       </main>
+
+      {/* Image Upload & Media Modal */}
+      <ImageUploadModal
+        isOpen={uploadModal.isOpen}
+        onClose={() => setUploadModal((prev) => ({ ...prev, isOpen: false }))}
+        currentImageUrl={uploadModal.currentUrl}
+        title={uploadModal.title}
+        siteId={website?.id || id}
+        onImageSelected={(url) => {
+          if (uploadModal.target === "logo") {
+            const nav = pageData?.sections.find((s) => s.type === "navbar");
+            const navData = (nav?.data || {}) as NavbarSectionData;
+            handleUpdateNavbarLogo("image", url, navData.accentWord);
+          } else if (uploadModal.target === "hero") {
+            handleUpdateHeroVisual("image", url);
+          } else if (typeof uploadModal.target === "object" && uploadModal.target.type === "doctor") {
+            handleUpdateDoctorImage(uploadModal.target.id, url);
+          }
+        }}
+        onImageRemoved={() => {
+          if (uploadModal.target === "logo") {
+            const nav = pageData?.sections.find((s) => s.type === "navbar");
+            const navData = (nav?.data || {}) as NavbarSectionData;
+            handleUpdateNavbarLogo("icon_text", undefined, navData.accentWord);
+          } else if (uploadModal.target === "hero") {
+            handleUpdateHeroVisual("action_card", undefined);
+          } else if (typeof uploadModal.target === "object" && uploadModal.target.type === "doctor") {
+            handleUpdateDoctorImage(uploadModal.target.id, undefined);
+          }
+        }}
+      />
     </div>
   );
 }
