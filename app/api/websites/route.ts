@@ -1,27 +1,42 @@
 import { NextResponse } from "next/server";
 import { repository } from "@/lib/repository";
-import { listWebsitesFromFirebase } from "@/lib/firebase-service";
-import type { Website } from "@/lib/types";
+import { getUserWebsites, saveUserWebsite } from "@/lib/firebase-service";
+import { getServerUser } from "@/lib/auth-server";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const user = await getServerUser(request);
+    const userId = user?.uid || "usr_dev_workspace";
+
+    // 1. Fetch live cloud websites from Firebase Realtime Database
     try {
-      const fbPromise = listWebsitesFromFirebase();
-      const timeoutPromise = new Promise<Website[]>((_, reject) =>
-        setTimeout(() => reject(new Error("Firebase list timeout")), 600)
-      );
-      const fbWebsites = await Promise.race([fbPromise, timeoutPromise]);
-      if (fbWebsites && fbWebsites.length > 0) {
-        for (const fbSite of fbWebsites) {
-          repository.upsertWebsite(fbSite);
+      const cloudWebsites = await getUserWebsites(userId);
+      if (cloudWebsites && cloudWebsites.length > 0) {
+        for (const site of cloudWebsites) {
+          repository.upsertWebsite(site, userId);
         }
+        return NextResponse.json(
+          cloudWebsites.map((w) => ({
+            id: w.id,
+            userId: w.userId,
+            name: w.name,
+            clientName: w.clientName,
+            templateId: w.templateId,
+            templateName: w.templateName,
+            status: w.status,
+            updatedAt: w.updatedAt,
+            domain: w.domain,
+            previewUrl: w.previewUrl,
+          }))
+        );
       }
-    } catch {
-      // Graceful fallback to cached repository websites
+    } catch (e) {
+      console.warn("[API websites] Error fetching from Firebase cloud:", e);
     }
 
-    const websites = repository.listWebsites();
-    return NextResponse.json(websites);
+    // 2. Return cached / locally initialized websites for this user
+    const userWebsites = repository.listWebsites(userId);
+    return NextResponse.json(userWebsites);
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message || "Failed to list websites" },
@@ -32,17 +47,32 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await getServerUser(request);
+    const userId = user?.uid || "usr_dev_workspace";
     const body = await request.json();
     const { name, clientName, templateId } = body;
 
-    if (!name || !clientName || !templateId) {
+    if (!name || !templateId) {
       return NextResponse.json(
-        { error: "name, clientName, and templateId are required" },
+        { error: "name and templateId are required" },
         { status: 400 }
       );
     }
 
-    const created = repository.createWebsite({ name, clientName, templateId });
+    const effectiveClientName = clientName?.trim() || name.trim();
+
+    const created = repository.createWebsite({
+      name: name.trim(),
+      clientName: effectiveClientName,
+      templateId,
+      userId,
+    });
+
+    // Ensure immediate cloud sync
+    await saveUserWebsite(userId, created).catch((err) => {
+      console.warn("[API websites] Background sync notice:", err);
+    });
+
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
     return NextResponse.json(

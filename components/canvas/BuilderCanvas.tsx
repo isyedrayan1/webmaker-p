@@ -263,7 +263,7 @@ export function BuilderCanvas({
           srcDoc={compiledHtml}
           title="Live Studio Builder Canvas"
           className="w-full h-full min-h-[calc(100vh-64px)] border-none bg-white"
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts allow-forms allow-modals"
         />
       </div>
     );
@@ -331,7 +331,7 @@ export function BuilderCanvas({
             }}
             title={`${activeConfig.label} Live Preview`}
             className="w-full h-full border-none bg-white"
-            sandbox="allow-scripts allow-same-origin allow-forms"
+            sandbox="allow-scripts allow-forms allow-modals"
           />
         </div>
       </div>

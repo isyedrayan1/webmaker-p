@@ -59,7 +59,7 @@ export function ImageUploadModal({
         throw new Error(data.error || "Upload failed");
       }
 
-      toast.success("Image uploaded to Cloudflare R2 successfully!");
+      toast.success("Image uploaded successfully!");
       onImageSelected(data.url);
       onClose();
     } catch (err: unknown) {
@@ -102,7 +102,7 @@ export function ImageUploadModal({
           {title}
         </h3>
         <p className="text-xs text-[hsl(var(--muted-foreground))] mb-5">
-          Uploaded images are saved securely in your Cloudflare R2 bucket.
+          Uploaded images are saved securely to your cloud media library.
         </p>
 
         {/* Current Image Preview & Clear */}
@@ -166,7 +166,7 @@ export function ImageUploadModal({
             <div className="flex flex-col items-center gap-2 py-4">
               <Loader2 size={28} className="animate-spin text-[hsl(var(--primary))]" />
               <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                Uploading to Cloudflare R2...
+                Uploading image...
               </span>
             </div>
           ) : (

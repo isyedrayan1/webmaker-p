@@ -30,12 +30,14 @@ export interface ClinicContent {
 
 export interface Website {
   id: string;
+  userId?: string;
   name: string;
   clientName: string;
   templateId: string;
   templateName: string;
   status: ProjectStatus;
   updatedAt: string;
+  createdAt?: string;
   domain?: string | null;
   previewUrl?: string | null;
   draft: ClinicContent;
@@ -49,12 +51,14 @@ export interface Website {
 
 export interface WebsiteSummary {
   id: string;
+  userId?: string;
   name: string;
   clientName: string;
   templateId?: string;
   templateName: string;
   status: ProjectStatus;
   updatedAt: string;
+  createdAt?: string;
   domain?: string | null;
   previewUrl?: string | null;
 }
@@ -70,6 +74,7 @@ export interface Template {
 
 export interface Deployment {
   id: string;
+  userId?: string;
   websiteId: string;
   websiteName: string;
   status: DeploymentStatus;
@@ -88,6 +93,7 @@ export interface Deployment {
 
 export interface DomainConnection {
   id: string;
+  userId?: string;
   websiteId: string;
   websiteName: string;
   domain: string;
@@ -96,3 +102,15 @@ export interface DomainConnection {
   instructions: string[];
   verifiedAt?: string | null;
 }
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  createdAt: string;
+  lastLoginAt: string;
+  plan: "starter" | "pro" | "agency";
+  role?: "user" | "founder" | "admin";
+}
+

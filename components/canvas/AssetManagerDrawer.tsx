@@ -88,14 +88,14 @@ export function AssetManagerDrawer({
       }
 
       if (newUploadedMetas.length > 0) {
-        toast.success(`Uploaded ${newUploadedMetas.length} image(s) to Cloudflare R2 Vault!`);
+        toast.success(`Uploaded ${newUploadedMetas.length} image(s) to Media Library!`);
         updateAssets({
           uploadedAssets: [...newUploadedMetas, ...uploadedList],
         });
       }
     } catch (err) {
       console.error("Batch upload failed:", err);
-      toast.error("Upload error. Check Cloudflare R2 credentials.");
+      toast.error("Upload failed. Please check your connection and try again.");
     } finally {
       setIsUploading(false);
     }
@@ -157,7 +157,7 @@ export function AssetManagerDrawer({
   const deleteAsset = (key: string) => {
     const filtered = uploadedList.filter((a) => a.key !== key);
     updateAssets({ uploadedAssets: filtered });
-    toast.success("Asset removed from Vault.");
+    toast.success("Image removed from Media Library.");
   };
 
   const copyUrlToClipboard = (key: string, url: string) => {
@@ -178,10 +178,10 @@ export function AssetManagerDrawer({
           <ImageIcon size={18} className="text-[hsl(var(--primary))]" />
           <div>
             <h3 className="font-semibold text-xs uppercase tracking-wider font-mono-app">
-              Media Vault
+              Media Library
             </h3>
             <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">
-              Cloudflare R2 Bucket Storage
+              Cloud Media Storage
             </span>
           </div>
         </div>
@@ -229,7 +229,7 @@ export function AssetManagerDrawer({
             <div className="py-3 flex flex-col items-center gap-2">
               <Loader2 size={24} className="animate-spin text-[hsl(var(--primary))]" />
               <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                Uploading directly to Cloudflare R2...
+                Uploading images to cloud...
               </span>
             </div>
           ) : (
@@ -240,7 +240,7 @@ export function AssetManagerDrawer({
               <div>
                 <span className="text-xs font-bold block">Drop images here or click to browse</span>
                 <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                  Multi-file Cloudflare R2 Upload (PNG, JPG, WebP, SVG)
+                  Upload images (PNG, JPG, WebP, SVG, up to 6MB)
                 </span>
               </div>
             </>
@@ -251,16 +251,16 @@ export function AssetManagerDrawer({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider font-mono-app">
-              Uploaded Files ({uploadedList.length})
+              Uploaded Images ({uploadedList.length})
             </span>
           </div>
 
           {uploadedList.length === 0 ? (
             <div className="p-8 text-center border border-[hsl(var(--border))] rounded-2xl bg-[hsl(var(--muted)/.2)] space-y-1">
               <ImageIcon size={28} className="mx-auto text-[hsl(var(--muted-foreground))] opacity-40 mb-2" />
-              <p className="text-xs font-semibold text-[hsl(var(--foreground))]">Your Vault is Empty</p>
+              <p className="text-xs font-semibold text-[hsl(var(--foreground))]">Your Media Library is Empty</p>
               <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                Drop your logos, hero photography, or doctor photos above to store them in your R2 vault.
+                Drop your logos, clinic photos, or staff portraits above to easily use them anywhere on your website.
               </p>
             </div>
           ) : (
@@ -289,7 +289,7 @@ export function AssetManagerDrawer({
                       <button
                         onClick={() => deleteAsset(asset.key)}
                         className="p-1 rounded-md bg-black/60 text-white hover:bg-red-600 transition cursor-pointer"
-                        title="Delete from Vault"
+                        title="Delete image"
                       >
                         <Trash2 size={12} />
                       </button>

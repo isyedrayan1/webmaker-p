@@ -90,7 +90,6 @@ function CreateWebsiteModal({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
-  const [clientName, setClientName] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [error, setError] = useState("");
 
@@ -107,7 +106,7 @@ function CreateWebsiteModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !clientName.trim() || !templateId) return;
+    if (!name.trim() || !templateId) return;
 
     setSubmitting(true);
     setError("");
@@ -118,7 +117,6 @@ function CreateWebsiteModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          clientName: clientName.trim(),
           templateId,
         }),
       });
@@ -154,16 +152,6 @@ function CreateWebsiteModal({
             />
           </label>
           <label className="block text-sm font-semibold">
-            Client name
-            <Field
-              data-testid="input-client-name"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="e.g. Harborview Medical Group"
-              className="mt-1.5"
-            />
-          </label>
-          <label className="block text-sm font-semibold">
             Starting template
             <select
               data-testid="select-website-template"
@@ -188,9 +176,7 @@ function CreateWebsiteModal({
           <Button
             data-testid="button-create-website-submit"
             type="submit"
-            disabled={
-              submitting || !name.trim() || !clientName.trim() || !templateId
-            }
+            disabled={submitting || !name.trim() || !templateId}
             className="w-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
           >
             {submitting ? <SubmitIcon /> : <Plus size={16} />}
@@ -218,8 +204,8 @@ export default function OverviewPage() {
       fetch("/api/deployments").then((r) => r.json()),
     ])
       .then(([webData, depData]) => {
-        setWebsites(webData);
-        setDeployments(depData);
+        setWebsites(Array.isArray(webData) ? webData : []);
+        setDeployments(Array.isArray(depData) ? depData : []);
         setLoading(false);
       })
       .catch(() => {
@@ -236,8 +222,8 @@ export default function OverviewPage() {
     ])
       .then(([webData, depData]) => {
         if (!active) return;
-        setWebsites(webData);
-        setDeployments(depData);
+        setWebsites(Array.isArray(webData) ? webData : []);
+        setDeployments(Array.isArray(depData) ? depData : []);
         setLoading(false);
       })
       .catch(() => {

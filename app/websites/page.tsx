@@ -84,7 +84,6 @@ function CreateWebsiteModal({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
-  const [clientName, setClientName] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [error, setError] = useState("");
 
@@ -101,7 +100,7 @@ function CreateWebsiteModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !clientName.trim() || !templateId) return;
+    if (!name.trim() || !templateId) return;
 
     setSubmitting(true);
     setError("");
@@ -112,7 +111,6 @@ function CreateWebsiteModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          clientName: clientName.trim(),
           templateId,
         }),
       });
@@ -148,16 +146,6 @@ function CreateWebsiteModal({
             />
           </label>
           <label className="block text-sm font-semibold">
-            Client name
-            <Field
-              data-testid="input-client-name"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="e.g. Harborview Medical Group"
-              className="mt-1.5"
-            />
-          </label>
-          <label className="block text-sm font-semibold">
             Starting template
             <select
               data-testid="select-website-template"
@@ -182,9 +170,7 @@ function CreateWebsiteModal({
           <Button
             data-testid="button-create-website-submit"
             type="submit"
-            disabled={
-              submitting || !name.trim() || !clientName.trim() || !templateId
-            }
+            disabled={submitting || !name.trim() || !templateId}
             className="w-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
           >
             {submitting ? <SubmitIcon /> : <Plus size={16} />}
@@ -196,13 +182,19 @@ function CreateWebsiteModal({
   );
 }
 
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { ref, onValue } from "firebase/database";
+
 export default function WebsitesPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [websites, setWebsites] = useState<WebsiteSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
   const fetchWebsites = () => {
     setLoading(true);
@@ -225,6 +217,8 @@ export default function WebsitesPage() {
 
   useEffect(() => {
     let active = true;
+
+    // 1. Initial REST fetch for instant display
     fetch("/api/websites")
       .then((res) => res.json())
       .then((data) => {
@@ -242,10 +236,48 @@ export default function WebsitesPage() {
         setLoading(false);
       });
 
+    // 2. Real-time WebSocket listener on user's cloud website node (when user is authenticated)
+    let unsubscribe = () => {};
+    if (user?.uid) {
+      const userWebsitesRef = ref(db, `users/${user.uid}/websites`);
+      unsubscribe = onValue(
+        userWebsitesRef,
+        (snapshot) => {
+          if (!active) return;
+          setIsRealtimeActive(true);
+          if (snapshot.exists()) {
+            const val = snapshot.val();
+            const list: WebsiteSummary[] = Object.values(val);
+            setWebsites(
+              list.map((site) => ({
+                id: site.id,
+                userId: site.userId,
+                name: site.name,
+                clientName: site.clientName,
+                templateId: site.templateId,
+                templateName: site.templateName,
+                status: site.status,
+                updatedAt: site.updatedAt,
+                domain: site.domain,
+                previewUrl: site.previewUrl,
+              }))
+            );
+          }
+          setLoading(false);
+        },
+        () => {
+          // If client RTDB rules require permission or haven't been published yet,
+          // the app transparently uses the secure server REST API
+          setIsRealtimeActive(false);
+        }
+      );
+    }
+
     return () => {
       active = false;
+      unsubscribe();
     };
-  }, []);
+  }, [user?.uid]);
 
   const filtered = useMemo(
     () =>
@@ -281,9 +313,17 @@ export default function WebsitesPage() {
           onChange={setQuery}
           placeholder="Search name, client, template…"
         />
-        <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-          <SlidersHorizontal size={15} />
-          {filtered.length} of {websites.length} projects
+        <div className="flex items-center gap-3 text-xs text-[hsl(var(--muted-foreground))]">
+          {isRealtimeActive && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Cloud Live
+            </span>
+          )}
+          <div className="flex items-center gap-1.5">
+            <SlidersHorizontal size={14} />
+            <span>{filtered.length} of {websites.length} projects</span>
+          </div>
         </div>
       </div>
 

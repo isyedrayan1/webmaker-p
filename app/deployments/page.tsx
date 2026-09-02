@@ -75,7 +75,7 @@ export default function DeploymentsPage() {
     fetch("/api/deployments")
       .then((res) => res.json())
       .then((data) => {
-        setDeployments(data);
+        setDeployments(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(() => {
@@ -90,7 +90,7 @@ export default function DeploymentsPage() {
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
-        setDeployments(data);
+        setDeployments(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(() => {

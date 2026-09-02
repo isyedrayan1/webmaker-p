@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   onAuthStateChanged,
+  onIdTokenChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
@@ -21,12 +22,14 @@ import { auth, googleProvider } from "@/lib/firebase";
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   loading: boolean;
   signInWithEmail: (email: string, pass: string) => Promise<User>;
   signUpWithEmail: (email: string, pass: string, name?: string) => Promise<User>;
   signInWithGoogle: () => Promise<User>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
+  getIdToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,35 +44,74 @@ function clearAuthCookie() {
   document.cookie = "wm_auth_token=; path=/; max-age=0; SameSite=Lax;";
 }
 
+async function syncProfileToDatabase(currentUser?: User | null) {
+  try {
+    const token = currentUser ? await currentUser.getIdToken() : undefined;
+    await fetch("/api/user/profile", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    // Non-blocking background profile sync
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen to Firebase persistent auth state
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    // 1. Listen to Firebase auth state
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         try {
-          const token = await currentUser.getIdToken();
-          setAuthCookie(token);
+          const freshToken = await currentUser.getIdToken();
+          setToken(freshToken);
+          setAuthCookie(freshToken);
+          syncProfileToDatabase(currentUser);
         } catch (e) {
           console.error("Failed to retrieve auth token:", e);
         }
       } else {
+        setToken(null);
         clearAuthCookie();
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // 2. Keep token fresh in cookies whenever Firebase refreshes the token (every hour)
+    const unsubscribeToken = onIdTokenChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          const freshToken = await currentUser.getIdToken();
+          setToken(freshToken);
+          setAuthCookie(freshToken);
+        } catch {
+          // Token refresh fallback
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeToken();
+    };
   }, []);
+
+  const getIdToken = async () => {
+    if (!auth.currentUser) return null;
+    return await auth.currentUser.getIdToken();
+  };
 
   const signInWithEmail = async (email: string, pass: string) => {
     const cred = await signInWithEmailAndPassword(auth, email, pass);
-    const token = await cred.user.getIdToken();
-    setAuthCookie(token);
+    const idToken = await cred.user.getIdToken();
+    setAuthCookie(idToken);
+    setToken(idToken);
     setUser(cred.user);
+    syncProfileToDatabase(cred.user);
     return cred.user;
   };
 
@@ -78,17 +120,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (name) {
       await updateProfile(cred.user, { displayName: name });
     }
-    const token = await cred.user.getIdToken();
-    setAuthCookie(token);
+    const idToken = await cred.user.getIdToken();
+    setAuthCookie(idToken);
+    setToken(idToken);
     setUser(cred.user);
+    syncProfileToDatabase(cred.user);
     return cred.user;
   };
 
   const signInWithGoogle = async () => {
     const cred = await signInWithPopup(auth, googleProvider);
-    const token = await cred.user.getIdToken();
-    setAuthCookie(token);
+    const idToken = await cred.user.getIdToken();
+    setAuthCookie(idToken);
+    setToken(idToken);
     setUser(cred.user);
+    syncProfileToDatabase(cred.user);
     return cred.user;
   };
 
@@ -99,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     clearAuthCookie();
+    setToken(null);
     setUser(null);
   };
 
@@ -106,12 +153,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        token,
         loading,
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
         resetPassword,
         logout,
+        getIdToken,
       }}
     >
       {children}

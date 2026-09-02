@@ -1,26 +1,34 @@
 import { NextResponse } from "next/server";
 import { repository } from "@/lib/repository";
-import { getWebsiteFromFirebase, saveWebsiteToFirebase } from "@/lib/firebase-service";
+import {
+  getUserWebsite,
+  saveUserWebsite,
+  deleteUserWebsite,
+} from "@/lib/firebase-service";
+import { getServerUser } from "@/lib/auth-server";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    let website = repository.getWebsite(id);
+    const user = await getServerUser(request);
+    const userId = user?.uid || "usr_dev_workspace";
 
-    if (!website || !website.landingPageData) {
-      try {
-        const fbSite = await getWebsiteFromFirebase(id);
-        if (fbSite) {
-          website = fbSite;
-        }
-      } catch (err) {
-        console.warn("Firebase GET fetch error:", err);
+    // 1. Fetch live cloud website from Firebase Realtime Database
+    try {
+      const cloudSite = await getUserWebsite(userId, id);
+      if (cloudSite) {
+        repository.upsertWebsite(cloudSite, userId);
+        return NextResponse.json(cloudSite);
       }
+    } catch (err) {
+      console.warn("[API websites/:id] Firebase fetch warning:", err);
     }
 
+    // 2. Fallback to cached repository website
+    const website = repository.getWebsite(id, userId);
     if (!website) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
@@ -40,18 +48,20 @@ async function handleUpdate(
 ) {
   try {
     const { id } = await params;
+    const user = await getServerUser(request);
+    const userId = user?.uid || "usr_dev_workspace";
     const body = await request.json();
-    const updated = repository.updateDraft(id, body);
+
+    const updated = repository.updateDraft(id, body, userId);
 
     if (!updated) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
-    try {
-      await saveWebsiteToFirebase(updated);
-    } catch (fbErr) {
-      console.warn("Firebase update sync warning:", fbErr);
-    }
+    // Save directly to Firebase Realtime Database
+    await saveUserWebsite(userId, updated).catch((fbErr) => {
+      console.warn("[API websites/:id] Firebase save warning:", fbErr);
+    });
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -77,12 +87,16 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const deleted = repository.deleteWebsite(id);
+    const user = await getServerUser(request);
+    const userId = user?.uid || "usr_dev_workspace";
+
+    await deleteUserWebsite(userId, id);
+    const deleted = repository.deleteWebsite(id, userId);
 
     if (!deleted) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });

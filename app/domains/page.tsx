@@ -169,8 +169,8 @@ export default function DomainsPage() {
       fetch("/api/websites").then((r) => r.json()),
     ])
       .then(([domData, webData]) => {
-        setDomains(domData);
-        setWebsites(webData);
+        setDomains(Array.isArray(domData) ? domData : []);
+        setWebsites(Array.isArray(webData) ? webData : []);
         setLoading(false);
       })
       .catch(() => {
@@ -187,8 +187,8 @@ export default function DomainsPage() {
     ])
       .then(([domData, webData]) => {
         if (!active) return;
-        setDomains(domData);
-        setWebsites(webData);
+        setDomains(Array.isArray(domData) ? domData : []);
+        setWebsites(Array.isArray(webData) ? webData : []);
         setLoading(false);
       })
       .catch(() => {

@@ -529,9 +529,15 @@ export default function WebsiteEditorPage({
       if (!res.ok) throw new Error("Deploy failed");
       const result = await res.json();
       setWebsite(result.website);
-      toast.success(`Successfully published to Hostinger!`);
+      const url = result.deployment?.url || `/api/websites/${id}/preview`;
+      toast.success("Website published successfully! Your live website is active.", {
+        action: {
+          label: "View Site",
+          onClick: () => window.open(url, "_blank"),
+        },
+      });
     } catch {
-      toast.error("Deployment failed. Check credentials in Settings.");
+      toast.error("Failed to publish website. Please try again.");
     } finally {
       setPublishing(false);
     }
@@ -819,14 +825,14 @@ export default function WebsiteEditorPage({
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-xs text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))]">
-                  Publish to Hostinger
+                  Publish Live Website
                 </span>
                 <span className="text-[9px] font-mono-app px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-semibold">
                   Live
                 </span>
               </div>
               <p className="text-[11px] text-[hsl(var(--muted-foreground))] leading-tight mt-0.5">
-                Deploy static build to production hosting &amp; linked domain.
+                Deploy and activate your website with an instant public preview.
               </p>
             </div>
           </button>
@@ -1214,10 +1220,10 @@ export default function WebsiteEditorPage({
                     ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))]"
                     : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
                 }`}
-                title="Open Cloudflare R2 Media Vault"
+                title="Open Media Library"
               >
                 <ImageIcon size={14} className="text-[hsl(var(--primary))]" />
-                <span className="hidden sm:inline">Vault</span>
+                <span className="hidden sm:inline">Media</span>
                 {pageData?.assets?.uploadedAssets && pageData.assets.uploadedAssets.length > 0 && (
                   <span className="rounded-full bg-[hsl(var(--primary))] text-white text-[9px] px-1.5 py-0.2 font-mono-app">
                     {pageData.assets.uploadedAssets.length}
