@@ -220,19 +220,20 @@ export default function WebsitesPage() {
 
     // 1. Initial REST fetch for instant display
     fetch("/api/websites")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("REST fetch failed");
+        return res.json();
+      })
       .then((data) => {
         if (!active) return;
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           setWebsites(data);
-        } else {
-          setWebsites([]);
         }
         setLoading(false);
       })
       .catch(() => {
         if (!active) return;
-        setError(true);
+        // Do not force error screen if realtime database listener is active and has data
         setLoading(false);
       });
 

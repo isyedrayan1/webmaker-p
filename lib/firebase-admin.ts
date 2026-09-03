@@ -16,48 +16,30 @@ export function getFirebaseAdminApp(): App | null {
     return adminApp;
   }
 
-  let projectId = process.env.FIREBASE_PROJECT_ID;
-  let clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   let databaseURL =
     process.env.FIREBASE_DATABASE_URL ||
     (projectId ? `https://${projectId}-default-rtdb.firebaseio.com` : undefined);
 
-  // If environment variables are missing or corrupted, load from secrets JSON
-  if (!projectId || !clientEmail || !privateKey) {
-    try {
-      // Dynamic import fs and path to avoid bundle issues on non-node runtimes
-      const fs = require("node:fs");
-      const path = require("node:path");
-      const secretPath = path.join(
-        process.cwd(),
-        "secrets",
-        "webmaker-mheim-firebase-adminsdk-fbsvc-e4c8552076.json"
-      );
-
-      if (fs.existsSync(secretPath)) {
-        const secretJson = JSON.parse(fs.readFileSync(secretPath, "utf-8"));
-        projectId = secretJson.project_id;
-        clientEmail = secretJson.client_email;
-        privateKey = secretJson.private_key;
-        if (!databaseURL && projectId) {
-          databaseURL = `https://${projectId}-default-rtdb.firebaseio.com`;
-        }
-      }
-    } catch (e) {
-      console.warn("[Firebase Admin] Could not load secrets JSON file:", e);
-    }
-  }
-
   if (!projectId || !clientEmail || !privateKey) {
     console.warn(
-      "[Firebase Admin] Missing service account credentials in environment variables or secrets file."
+      "[Firebase Admin] Missing required service account credentials in environment variables (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)."
     );
     return null;
   }
 
-  // Handle escaped newlines in environment variable strings
+  // Handle surrounding quotes, whitespace, or escaped newlines in environment variable strings
+  privateKey = privateKey.trim();
+  if (
+    (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+    (privateKey.startsWith("'") && privateKey.endsWith("'"))
+  ) {
+    privateKey = privateKey.slice(1, -1);
+  }
   privateKey = privateKey.replace(/\\n/g, "\n");
+
   if (!databaseURL) {
     databaseURL = `https://${projectId}-default-rtdb.firebaseio.com`;
   }
