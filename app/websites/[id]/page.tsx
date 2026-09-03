@@ -53,6 +53,7 @@ import {
   User,
 } from "lucide-react";
 import type { Website, WebsiteSummary } from "@/lib/types";
+import { sampleContent } from "@/lib/data";
 import {
   DEFAULT_CLINIC_DATA,
   THEME_PALETTES,
