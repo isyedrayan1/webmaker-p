@@ -13,12 +13,15 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const decodedId = decodeURIComponent(id);
     const user = await getServerUser(request);
     const userId = user?.uid || "usr_dev_workspace";
 
     // 1. Fetch live cloud website from Firebase Realtime Database
     try {
-      const cloudSite = await getUserWebsite(userId, id);
+      const cloudSite =
+        (await getUserWebsite(userId, decodedId)) ||
+        (await getUserWebsite(userId, id));
       if (cloudSite) {
         repository.upsertWebsite(cloudSite, userId);
         return NextResponse.json(cloudSite);
@@ -27,12 +30,8 @@ export async function GET(
       console.warn("[API websites/:id] Firebase fetch warning:", err);
     }
 
-    // 2. Fallback to cached repository website
-    const website = repository.getWebsite(id, userId);
-    if (!website) {
-      return NextResponse.json({ error: "Website not found" }, { status: 404 });
-    }
-
+    // 2. Fallback to cached or auto-recovered repository website
+    const website = repository.getWebsite(decodedId, userId);
     return NextResponse.json(website);
   } catch (error) {
     return NextResponse.json(

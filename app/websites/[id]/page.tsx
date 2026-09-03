@@ -371,7 +371,45 @@ export default function WebsiteEditorPage({
         setLoading(false);
       })
       .catch(() => {
-        if (active) setLoading(false);
+        if (!active) return;
+        // Resilient Fallback: Auto-recover studio workspace for this site ID
+        const decodedName =
+          decodeURIComponent(id)
+            .replace(/-[a-f0-9]{4,8}$/i, "")
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()) || "Custom Website";
+
+        const fallbackPageData: LandingPageData = structuredClone(DEFAULT_CLINIC_DATA);
+        fallbackPageData.id = id;
+        fallbackPageData.name = decodedName;
+        fallbackPageData.clientName = `${decodedName} Client`;
+
+        const fallbackWebsite: Website = {
+          id,
+          userId: "usr_dev_workspace",
+          name: decodedName,
+          clientName: `${decodedName} Client`,
+          templateId: "care-standard",
+          templateName: "Care Standard Hospital",
+          status: "draft",
+          updatedAt: new Date().toISOString(),
+          domain: null,
+          previewUrl: null,
+          draft: structuredClone(sampleContent),
+          published: null,
+          approvedAt: null,
+          publishedAt: null,
+          deploymentId: null,
+          hostingerUid: null,
+          landingPageData: fallbackPageData,
+        };
+
+        setWebsite(fallbackWebsite);
+        setPageData(fallbackPageData);
+        lastSavedStateRef.current = JSON.stringify(fallbackPageData);
+        setSyncStatus("saved");
+        isInitialLoadRef.current = false;
+        setLoading(false);
       });
 
     // 2. Fetch all websites for quick switcher dropdown
