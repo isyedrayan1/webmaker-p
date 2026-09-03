@@ -122,11 +122,11 @@ export default function LandingPage() {
                       : "bg-[hsl(var(--border))]"
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row items-center gap-1.5 rounded-full bg-[hsl(var(--card))] p-1">
-                    <div className="relative w-full flex-1 flex items-center pl-3.5">
+                  <div className="flex flex-row items-center gap-1.5 rounded-full bg-[hsl(var(--card))] p-1">
+                    <div className="relative min-w-0 flex-1 flex items-center pl-3">
                       <Mail
                         size={15}
-                        className={`transition-colors duration-200 ${
+                        className={`shrink-0 transition-colors duration-200 ${
                           isFocused
                             ? "text-[hsl(var(--primary))]"
                             : "text-[hsl(var(--muted-foreground))]"
@@ -138,24 +138,25 @@ export default function LandingPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
-                        placeholder="Enter your work email..."
+                        placeholder="Enter work email..."
                         autoComplete="off"
                         spellCheck={false}
                         required
-                        className="w-full h-10 bg-transparent pl-2.5 pr-3 font-sans text-xs sm:text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:bg-transparent active:bg-transparent"
+                        className="w-full h-10 bg-transparent pl-2 pr-2 font-sans text-xs sm:text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:bg-transparent active:bg-transparent"
                       />
                     </div>
 
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full sm:w-auto h-10 px-5 rounded-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-white font-sans text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                      className="h-10 px-4 sm:px-5 rounded-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-white font-sans text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                     >
                       {submitting ? (
                         <Loader2 size={15} className="animate-spin" />
                       ) : (
                         <>
-                          <span>Get Early Access</span>
+                          <span className="hidden sm:inline">Get Early Access</span>
+                          <span className="sm:hidden">Get Access</span>
                           <ArrowRight size={14} />
                         </>
                       )}

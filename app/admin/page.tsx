@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { LogoMark } from "@/components/factory-ui";
 import {
@@ -43,6 +43,34 @@ export default function AdminPage() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/users");
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || []);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch admin users:", e);
+    }
+  }, []);
+
+  const fetchEntries = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/waitlist");
+      if (res.ok) {
+        const data = await res.json();
+        setEntries(data);
+      }
+      fetchUsers();
+    } catch {
+      // Fallback
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchUsers]);
+
   // Check if server session is already authenticated on mount
   useEffect(() => {
     fetch("/api/admin/login")
@@ -55,7 +83,7 @@ export default function AdminPage() {
       })
       .catch(() => {})
       .finally(() => setCheckingSession(false));
-  }, []);
+  }, [fetchEntries, fetchUsers]);
 
   // Real-time live listener for waitlist entries
   useEffect(() => {
@@ -85,18 +113,6 @@ export default function AdminPage() {
     };
   }, [authenticated]);
 
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch("/api/admin/users");
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users || []);
-      }
-    } catch (e) {
-      console.warn("Failed to fetch admin users:", e);
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -120,22 +136,6 @@ export default function AdminPage() {
       }
     } catch {
       setAuthError("Failed to authenticate with server.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchEntries = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/waitlist");
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data);
-      }
-      fetchUsers();
-    } catch {
-      // Fallback
     } finally {
       setLoading(false);
     }
@@ -190,13 +190,42 @@ export default function AdminPage() {
     }
   };
 
-  const filteredEntries = entries.filter((e) =>
+  const copyDirectLoginLink = async (userEmail: string, userId: string) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const url = `${origin}/login?email=${encodeURIComponent(userEmail)}`;
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setCopiedId(userId);
+        setTimeout(() => setCopiedId(null), 3000);
+        return;
+      }
+    } catch {}
+
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = url;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopiedId(userId);
+      setTimeout(() => setCopiedId(null), 3000);
+    } catch {}
+  };
+
+  const activeLeads = entries.filter((e) => e.status !== "claimed");
+  const filteredEntries = activeLeads.filter((e) =>
     e.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const pendingCount = entries.filter((e) => e.status === "pending").length;
   const approvedCount = entries.filter((e) => e.status === "approved").length;
-  const claimedCount = entries.filter((e) => e.status === "claimed").length;
+  const claimedCount = Math.max(entries.filter((e) => e.status === "claimed").length, users.length);
 
   if (checkingSession) {
     return (
@@ -345,7 +374,7 @@ export default function AdminPage() {
               }`}
             >
               <Users size={13} />
-              <span>Waitlist Leads ({entries.length})</span>
+              <span>Waitlist Leads ({activeLeads.length})</span>
             </button>
             <button
               type="button"
@@ -479,7 +508,8 @@ export default function AdminPage() {
                     <th className="py-3 px-4">Registered</th>
                     <th className="py-3 px-4">Last Login</th>
                     <th className="py-3 px-4">Websites</th>
-                    <th className="py-3 px-4 text-right">Access Source</th>
+                    <th className="py-3 px-4">Access Source</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
@@ -490,7 +520,7 @@ export default function AdminPage() {
                       u.uid.toLowerCase().includes(search.toLowerCase())
                   ).length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[hsl(var(--muted-foreground))]">
+                      <td colSpan={7} className="py-8 text-center text-[hsl(var(--muted-foreground))]">
                         No registered users found matching &ldquo;{search}&rdquo;.
                       </td>
                     </tr>
@@ -529,7 +559,7 @@ export default function AdminPage() {
                               {u.websitesCount} {u.websitesCount === 1 ? "site" : "sites"}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-3 px-4">
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono-app font-semibold uppercase ${
                                 u.waitlistStatus === "claimed"
@@ -545,6 +575,25 @@ export default function AdminPage() {
                                 ? "Direct Account"
                                 : u.waitlistStatus}
                             </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => copyDirectLoginLink(u.email, u.uid)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] text-[11px] font-medium transition cursor-pointer"
+                            >
+                              {copiedId === u.uid ? (
+                                <>
+                                  <Check size={12} className="text-emerald-500" />
+                                  <span className="text-emerald-600">Copied Link!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={12} />
+                                  <span>Copy Login Link</span>
+                                </>
+                              )}
+                            </button>
                           </td>
                         </tr>
                       ))

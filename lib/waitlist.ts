@@ -1,5 +1,6 @@
 import { db } from "./firebase";
 import { ref, set, get, child, update } from "firebase/database";
+import { getAdminDb } from "./firebase-admin";
 
 export interface WaitlistEntry {
   id: string;
@@ -23,7 +24,7 @@ function generateInviteToken(): string {
   return "WM-" + Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.floor(1000 + Math.random() * 9000);
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs = 500): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 800): Promise<T> {
   const timeout = new Promise<T>((_, reject) =>
     setTimeout(() => reject(new Error("Firebase operation timed out")), timeoutMs)
   );
@@ -31,21 +32,22 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs = 500): Promise<T> 
 }
 
 /**
- * Adds a new email to the early access waitlist with instant response
+ * Adds a new email to the early access waitlist
  */
 export async function addWaitlistEntry(email: string): Promise<WaitlistEntry> {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Check local cache first
-  const existingLocal = Array.from(localWaitlistCache.values()).find(
+  // Check existing entries
+  const existingEntries = await getWaitlistEntries();
+  const existing = existingEntries.find(
     (e) => e.email.toLowerCase() === normalizedEmail
   );
-  if (existingLocal) {
-    return existingLocal;
+  if (existing) {
+    return existing;
   }
 
   const id = generateId();
-  const position = localWaitlistCache.size + 1;
+  const position = existingEntries.length + 1;
   const inviteToken = generateInviteToken();
 
   const newEntry: WaitlistEntry = {
@@ -57,38 +59,58 @@ export async function addWaitlistEntry(email: string): Promise<WaitlistEntry> {
     inviteToken,
   };
 
-  // 1. Immediately store in local cache so response is instantaneous
   localWaitlistCache.set(id, newEntry);
 
-  // 2. Background sync to Firebase RTDB without blocking the user
+  // Admin DB write (Server)
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      await adminDb.ref(`waitlist/${id}`).set(newEntry);
+      return newEntry;
+    } catch (err) {
+      console.warn("[Waitlist] Admin DB set warning:", err);
+    }
+  }
+
+  // Client DB write fallback
   try {
     const entryRef = ref(db, `waitlist/${id}`);
-    withTimeout(set(entryRef, newEntry), 600).catch(() => {
-      // Background sync fallback
-    });
-  } catch {
-    // Non-blocking fallback
-  }
+    withTimeout(set(entryRef, newEntry), 1000).catch(() => {});
+  } catch {}
 
   return newEntry;
 }
 
 /**
- * Retrieves all waitlist entries
+ * Retrieves all waitlist entries using Admin SDK first
  */
 export async function getWaitlistEntries(): Promise<WaitlistEntry[]> {
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      const snapshot = await adminDb.ref("waitlist").get();
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const entries = Object.values(data) as WaitlistEntry[];
+        entries.forEach((e) => localWaitlistCache.set(e.id, e));
+        return entries.sort((a, b) => a.position - b.position);
+      }
+    } catch (err) {
+      console.warn("[Waitlist] Admin DB fetch warning:", err);
+    }
+  }
+
+  // Client SDK fallback
   try {
     const dbRef = ref(db);
-    const snapshot = await withTimeout(get(child(dbRef, "waitlist")), 500);
+    const snapshot = await withTimeout(get(child(dbRef, "waitlist")), 800);
     if (snapshot.exists()) {
       const data = snapshot.val();
       const entries = Object.values(data) as WaitlistEntry[];
       entries.forEach((e) => localWaitlistCache.set(e.id, e));
       return entries.sort((a, b) => a.position - b.position);
     }
-  } catch {
-    // Return cached entries if Firebase is offline or slow
-  }
+  } catch {}
 
   return Array.from(localWaitlistCache.values()).sort((a, b) => a.position - b.position);
 }
@@ -101,26 +123,32 @@ export async function approveWaitlistEntry(id: string): Promise<WaitlistEntry | 
   const entry = entries.find((e) => e.id === id);
   if (!entry) return null;
 
+  const approvedAt = new Date().toISOString();
   const updated: WaitlistEntry = {
     ...entry,
     status: "approved",
-    approvedAt: new Date().toISOString(),
+    approvedAt,
   };
 
   localWaitlistCache.set(id, updated);
 
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      await adminDb.ref(`waitlist/${id}`).update({
+        status: "approved",
+        approvedAt,
+      });
+      return updated;
+    } catch (err) {
+      console.warn("[Waitlist] Admin DB approve warning:", err);
+    }
+  }
+
   try {
     const entryRef = ref(db, `waitlist/${id}`);
-    withTimeout(
-      update(entryRef, {
-        status: "approved",
-        approvedAt: updated.approvedAt,
-      }),
-      600
-    ).catch(() => {});
-  } catch {
-    // Non-blocking fallback
-  }
+    withTimeout(update(entryRef, { status: "approved", approvedAt }), 1000).catch(() => {});
+  } catch {}
 
   return updated;
 }
@@ -145,25 +173,64 @@ export async function claimInviteToken(token: string): Promise<boolean> {
   const entry = await validateInviteToken(token);
   if (!entry) return false;
 
+  const claimedAt = new Date().toISOString();
   const updated: WaitlistEntry = {
     ...entry,
     status: "claimed",
-    claimedAt: new Date().toISOString(),
+    claimedAt,
   };
 
   localWaitlistCache.set(entry.id, updated);
 
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      await adminDb.ref(`waitlist/${entry.id}`).update({
+        status: "claimed",
+        claimedAt,
+      });
+      return true;
+    } catch (err) {
+      console.warn("[Waitlist] Admin DB claim warning:", err);
+    }
+  }
+
   try {
     const entryRef = ref(db, `waitlist/${entry.id}`);
-    withTimeout(
-      update(entryRef, {
+    withTimeout(update(entryRef, { status: "claimed", claimedAt }), 1000).catch(() => {});
+  } catch {}
+
+  return true;
+}
+
+/**
+ * Automatically marks a waitlist entry as claimed if user logs in with that email
+ */
+export async function claimWaitlistByEmail(email: string): Promise<boolean> {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  const entries = await getWaitlistEntries();
+  const entry = entries.find((e) => e.email.toLowerCase() === normalized);
+  if (!entry || entry.status === "claimed") return false;
+
+  const claimedAt = new Date().toISOString();
+  const updated: WaitlistEntry = {
+    ...entry,
+    status: "claimed",
+    claimedAt,
+  };
+
+  localWaitlistCache.set(entry.id, updated);
+
+  const adminDb = getAdminDb();
+  if (adminDb) {
+    try {
+      await adminDb.ref(`waitlist/${entry.id}`).update({
         status: "claimed",
-        claimedAt: updated.claimedAt,
-      }),
-      600
-    ).catch(() => {});
-  } catch {
-    // Local update sufficient
+        claimedAt,
+      });
+      return true;
+    } catch {}
   }
 
   return true;

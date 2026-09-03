@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerUser } from "@/lib/auth-server";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { claimWaitlistByEmail } from "@/lib/waitlist";
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +20,10 @@ export async function POST(request: Request) {
         photoURL: user.photoURL || null,
         lastLoginAt: new Date().toISOString(),
       });
+    }
+
+    if (user.email) {
+      await claimWaitlistByEmail(user.email).catch(() => {});
     }
 
     return NextResponse.json({ success: true });
