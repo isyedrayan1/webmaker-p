@@ -180,14 +180,26 @@ export function LoadingRows() {
       {[1, 2, 3, 4].map((item) => (
         <div
           key={item}
-          className="flex items-center gap-4 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4"
+          className="grid items-center gap-4 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 sm:grid-cols-[1fr_1.1fr_.8fr_.8fr_auto]"
         >
-          <Skeleton className="h-10 w-10 rounded-lg" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-2/5" />
-            <Skeleton className="h-2.5 w-1/4" />
+          <div className="flex items-center gap-3 min-w-0">
+            <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+            <div className="space-y-2 flex-1 min-w-0">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-20" />
+            </div>
           </div>
-          <Skeleton className="h-6 w-20 rounded-full" />
+          <div className="hidden sm:block space-y-1.5">
+            <Skeleton className="h-2.5 w-14" />
+            <Skeleton className="h-3.5 w-28" />
+          </div>
+          <div>
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <div className="hidden sm:block">
+            <Skeleton className="h-3.5 w-16" />
+          </div>
+          <Skeleton className="h-4 w-4 rounded-full" />
         </div>
       ))}
     </div>

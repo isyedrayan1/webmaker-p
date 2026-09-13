@@ -188,16 +188,21 @@ function CreateWebsiteModal({
   );
 }
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function OverviewPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [websites, setWebsites] = useState<WebsiteSummary[]>([]);
   const [deployments, setDeployments] = useState<Deployment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
+  const isPageLoading = authLoading || dataLoading;
+
   const fetchData = () => {
-    setLoading(true);
+    setDataLoading(true);
     setError(false);
     Promise.all([
       fetch("/api/websites").then((r) => r.json()),
@@ -206,15 +211,17 @@ export default function OverviewPage() {
       .then(([webData, depData]) => {
         setWebsites(Array.isArray(webData) ? webData : []);
         setDeployments(Array.isArray(depData) ? depData : []);
-        setLoading(false);
+        setDataLoading(false);
       })
       .catch(() => {
         setError(true);
-        setLoading(false);
+        setDataLoading(false);
       });
   };
 
   useEffect(() => {
+    if (authLoading) return;
+
     let active = true;
     Promise.all([
       fetch("/api/websites").then((r) => r.json()),
@@ -224,18 +231,18 @@ export default function OverviewPage() {
         if (!active) return;
         setWebsites(Array.isArray(webData) ? webData : []);
         setDeployments(Array.isArray(depData) ? depData : []);
-        setLoading(false);
+        setDataLoading(false);
       })
       .catch(() => {
         if (!active) return;
         setError(true);
-        setLoading(false);
+        setDataLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [authLoading, user?.uid]);
 
   const active = websites.filter(
     (item) => item.status !== "live" && item.status !== "published"
@@ -266,19 +273,19 @@ export default function OverviewPage() {
         {[
           {
             label: "Total Websites",
-            value: loading ? "—" : String(websites.length),
+            value: isPageLoading ? "—" : String(websites.length),
             note: "active website projects",
             icon: Globe2,
           },
           {
             label: "Drafts in Progress",
-            value: loading ? "—" : String(active.length),
+            value: isPageLoading ? "—" : String(active.length),
             note: "websites currently being edited",
             icon: Activity,
           },
           {
             label: "Live Deployments",
-            value: loading
+            value: isPageLoading
               ? "—"
               : String(deployments.filter((item) => item.status === "live").length),
             note: "published production websites",
@@ -332,7 +339,7 @@ export default function OverviewPage() {
             </Link>
           </div>
 
-          {loading ? (
+          {isPageLoading ? (
             <LoadingRows />
           ) : error ? (
             <ErrorState onRetry={fetchData} />
@@ -376,7 +383,7 @@ export default function OverviewPage() {
           </div>
 
           <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
-            {loading ? (
+            {isPageLoading ? (
               <div className="space-y-6">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex gap-3">
@@ -419,7 +426,7 @@ export default function OverviewPage() {
               ))
             )}
 
-            {!loading && !error && !deployments.length && (
+            {!isPageLoading && !error && !deployments.length && (
               <p className="py-10 text-center text-sm text-[hsl(var(--muted-foreground))]">
                 Deployment logs will appear here when websites are published.
               </p>

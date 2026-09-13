@@ -63,46 +63,53 @@ function DeploymentRow({ deployment }: { deployment: Deployment }) {
   );
 }
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function DeploymentsPage() {
+  const { user, loading: authLoading } = useAuth();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState(false);
   const [query, setQuery] = useState("");
 
+  const isPageLoading = authLoading || dataLoading;
+
   const fetchDeployments = () => {
-    setLoading(true);
+    setDataLoading(true);
     setError(false);
     fetch("/api/deployments")
       .then((res) => res.json())
       .then((data) => {
         setDeployments(Array.isArray(data) ? data : []);
-        setLoading(false);
+        setDataLoading(false);
       })
       .catch(() => {
         setError(true);
-        setLoading(false);
+        setDataLoading(false);
       });
   };
 
   useEffect(() => {
+    if (authLoading) return;
+
     let active = true;
     fetch("/api/deployments")
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
         setDeployments(Array.isArray(data) ? data : []);
-        setLoading(false);
+        setDataLoading(false);
       })
       .catch(() => {
         if (!active) return;
         setError(true);
-        setLoading(false);
+        setDataLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [authLoading, user?.uid]);
 
   const filtered = deployments.filter((item) =>
     item.websiteName.toLowerCase().includes(query.toLowerCase())
@@ -138,7 +145,7 @@ export default function DeploymentsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isPageLoading ? (
         <LoadingRows />
       ) : error ? (
         <ErrorState onRetry={fetchDeployments} />

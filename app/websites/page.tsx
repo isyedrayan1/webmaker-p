@@ -188,16 +188,18 @@ import { ref, onValue } from "firebase/database";
 
 export default function WebsitesPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [websites, setWebsites] = useState<WebsiteSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState(false);
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
+  const isPageLoading = authLoading || dataLoading;
+
   const fetchWebsites = () => {
-    setLoading(true);
+    setDataLoading(true);
     setError(false);
     fetch("/api/websites")
       .then((res) => res.json())
@@ -207,15 +209,17 @@ export default function WebsitesPage() {
         } else {
           setWebsites([]);
         }
-        setLoading(false);
+        setDataLoading(false);
       })
       .catch(() => {
         setError(true);
-        setLoading(false);
+        setDataLoading(false);
       });
   };
 
   useEffect(() => {
+    if (authLoading) return;
+
     let active = true;
 
     // 1. Initial REST fetch for instant display
@@ -226,15 +230,15 @@ export default function WebsitesPage() {
       })
       .then((data) => {
         if (!active) return;
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setWebsites(data);
         }
-        setLoading(false);
+        setDataLoading(false);
       })
       .catch(() => {
         if (!active) return;
         // Do not force error screen if realtime database listener is active and has data
-        setLoading(false);
+        setDataLoading(false);
       });
 
     // 2. Real-time WebSocket listener on user's cloud website node (when user is authenticated)
@@ -264,7 +268,7 @@ export default function WebsitesPage() {
               }))
             );
           }
-          setLoading(false);
+          setDataLoading(false);
         },
         () => {
           // If client RTDB rules require permission or haven't been published yet,
@@ -278,7 +282,7 @@ export default function WebsitesPage() {
       active = false;
       unsubscribe();
     };
-  }, [user?.uid]);
+  }, [authLoading, user?.uid]);
 
   const filtered = useMemo(
     () =>
@@ -328,7 +332,7 @@ export default function WebsitesPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isPageLoading ? (
         <LoadingRows />
       ) : error ? (
         <ErrorState onRetry={fetchWebsites} />
