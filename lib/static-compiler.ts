@@ -418,42 +418,27 @@ function renderReviews(reviews: Partial<ReviewsSectionData>, editAttr: string): 
 }
 
 function renderHours(hours: Partial<HoursSectionData>, editAttr: string): string {
-  const showEmergency = hours.showEmergencyNotice !== false && (hours.emergencyHotline || editAttr);
-
   return `
-  <!-- HOURS & EMERGENCY -->
-  <section id="hours">
+  <!-- HOURS SECTION -->
+  <section id="hours" style="background-color: #ffffff;">
     <div class="container">
-      <div class="grid-hours">
-        <div style="min-width: 0;">
-          ${hours.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="hours.eyebrow">${escapeHtml(hours.eyebrow || "Clinic Schedule")}</span>` : ""}
-          <h2 class="section-title" style="word-break: break-word;" ${editAttr} data-field="hours.headline">${escapeHtml(hours.headline || "Operating Hours & Emergency Triage.")}</h2>
-          ${hours.description || editAttr ? `<p class="section-desc" style="max-width: 65ch; word-break: break-word;" ${editAttr} data-field="hours.description">${escapeHtml(hours.description || "Convenient morning, evening, and weekend hours.")}</p>` : ""}
+      <div style="max-width: 750px; margin: 0 auto; text-align: center;">
+        ${hours.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="hours.eyebrow">${escapeHtml(hours.eyebrow || "Operating Schedule")}</span>` : ""}
+        <h2 class="section-title" style="word-break: break-word;" ${editAttr} data-field="hours.headline">${escapeHtml(hours.headline || "Clinic Hours & Urgent Availability.")}</h2>
+        ${hours.description || editAttr ? `<p class="section-desc" style="word-break: break-word; margin-bottom: 2.5rem;" ${editAttr} data-field="hours.description">${escapeHtml(hours.description || "Walk-ins welcome during regular hours. 24/7 triage for urgent care.")}</p>` : ""}
 
-          ${
-            showEmergency
-              ? `<div style="margin-top: 2rem; background: rgba(0,0,0,0.03); border-left: 4px solid var(--primary); padding: 1.25rem; border-radius: 0.5rem;">
-            <p style="font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 0.4rem;">${ICONS.alert} 24/7 Emergency Assistance</p>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; word-break: break-word;" ${editAttr} data-field="hours.emergencyNotice">${escapeHtml(hours.emergencyNotice || "Urgent care & triage available 24/7.")}</p>
-            <a href="tel:${hours.emergencyHotline || "+1 (800) 427-2673"}" style="display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; font-weight: bold; color: var(--primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ICONS.phone} Hotline: <span ${editAttr} data-field="hours.emergencyHotline">${escapeHtml(hours.emergencyHotline || "+1 (800) 427-2673")}</span></a>
-          </div>`
-              : ""
-          }
-        </div>
-
-        <div class="card" style="min-width: 0;">
-          <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">Regular Operating Hours</h3>
-          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div class="card" style="background: var(--bg-light); text-align: left;">
+          <div style="display: flex; flex-direction: column; gap: 0.85rem;">
             ${(hours.schedule || [
-              { day: "Monday – Friday", hours: "7:30 AM – 7:00 PM" },
-              { day: "Saturday", hours: "8:30 AM – 4:00 PM" },
+              { day: "Monday – Friday", hours: "8:00 AM – 7:00 PM" },
+              { day: "Saturday", hours: "9:00 AM – 5:00 PM" },
               { day: "Sunday", hours: "9:00 AM – 2:00 PM (Urgent Care)" },
             ])
               .map(
                 (item, index) => `
             <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-light); padding-bottom: 0.5rem; font-size: 0.9rem; gap: 1rem;">
-              <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="hours.schedule.${index}.day">${escapeHtml(item.day)}</span>
-              <span style="color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;" ${editAttr} data-field="hours.schedule.${index}.hours">${escapeHtml(item.hours)}</span>
+              <span style="font-weight: 600;" ${editAttr} data-field="hours.schedule.${index}.day">${escapeHtml(item.day)}</span>
+              <span style="color: var(--text-muted); font-family: var(--font-mono);" ${editAttr} data-field="hours.schedule.${index}.hours">${escapeHtml(item.hours)}</span>
             </div>`
               )
               .join("")}
@@ -477,11 +462,15 @@ function renderBooking(
     site
   );
 
+  const showMap = booking.showMap !== false;
+  const mapQuery = booking.mapEmbedUrl || `${booking.address || "742 Evergreen Parkway"}, ${booking.cityState || "Seattle, WA"}`;
+  const mapEmbedIframeUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+
   return `
   <!-- BOOKING & CONTACT FORM -->
   <section id="booking" style="background-color: #ffffff; border-top: 1px solid var(--border-light);">
     <div class="container">
-      <div class="grid-booking">
+      <div class="${showMap ? "grid-booking" : "grid-booking-nomap"}" style="align-items: start;">
         <div style="min-width: 0;">
           ${booking.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="booking.eyebrow">${escapeHtml(booking.eyebrow || "Get in Touch")}</span>` : ""}
           <h2 class="section-title" style="word-break: break-word;" ${editAttr} data-field="booking.headline">${escapeHtml(booking.headline || "Schedule Your Appointment Today.")}</h2>
@@ -522,6 +511,14 @@ function renderBooking(
                 : ""
             }
           </div>
+
+          ${
+            showMap
+              ? `<div style="margin-top: 2rem; width: 100%; height: 260px; border-radius: 1.5rem; overflow: hidden; border: 1px solid var(--border-light); box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+            <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="${mapEmbedIframeUrl}" style="border: 0; display: block;" title="Clinic Google Maps Location"></iframe>
+          </div>`
+              : ""
+          }
         </div>
 
         <div class="card" style="background-color: var(--bg-light); min-width: 0;">
@@ -762,7 +759,11 @@ export function compileLandingPageToHtml(
     .grid-reviews { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; }
     .grid-hours { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3rem; align-items: start; }
     .grid-booking { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
+    .grid-booking-nomap { display: grid; grid-template-columns: 1fr; max-width: 750px; margin: 0 auto; gap: 2rem; align-items: start; }
     .grid-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 3rem; margin-bottom: 3rem; }
+
+    /* Empty Slot Auto-Collapse */
+    .slot-container:empty { display: none !important; }
 
     /* Cards & Defensive UI Primitives */
     .card { background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 1.25rem; padding: 2rem; min-width: 0; word-break: break-word; overflow-wrap: break-word; }

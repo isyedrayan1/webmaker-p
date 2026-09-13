@@ -110,7 +110,7 @@ export interface NavbarSectionData {
   links: NavLink[];
 }
 
-export type HeroVisualMode = "image" | "action_card" | "hotline_box" | "trust_cluster" | "editorial";
+export type HeroVisualMode = "image" | "action_card" | "hotline_box" | "trust_cluster" | "editorial" | "none";
 
 export interface HeroSectionData {
   badge?: string;
@@ -233,6 +233,8 @@ export interface BookingSectionData {
   cityState?: string;
   phone?: string;
   email?: string;
+  showMap?: boolean;
+  mapEmbedUrl?: string;
   formTitle: string;
   departments: string[];
 }
