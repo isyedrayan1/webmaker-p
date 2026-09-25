@@ -44,6 +44,7 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  Sliders,
   Smartphone,
   Sparkles,
   Tablet,
@@ -169,7 +170,7 @@ export default function WebsiteEditorPage({
   const [publishing, setPublishing] = useState(false);
   const [mode, setMode] = useState<BuilderMode>("edit");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
-  const [showToolsPanel, setShowToolsPanel] = useState(false);
+  const [showToolsPanel, setShowToolsPanel] = useState(true);
   const [showAssetDrawer, setShowAssetDrawer] = useState(false);
   const [activeTab, setActiveTab] = useState<"layout" | "media" | "buttons" | "seo">("layout");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>("hero");
@@ -595,6 +596,52 @@ export default function WebsiteEditorPage({
       sec.id === sectionId ? { ...sec, enabled: !sec.enabled } : sec
     );
     pushToHistory({ ...pageData, sections: updated });
+  };
+
+  const handleSectionCanvasAction = (action: string, secId: string) => {
+    if (!pageData) return;
+    const sections = [...pageData.sections];
+    const index = sections.findIndex((s) => s.id === secId || s.type === secId);
+    if (index === -1) return;
+
+    if (action === "move_up") {
+      if (index <= 0) {
+        toast.info("Section is already at the top");
+        return;
+      }
+      const temp = sections[index];
+      sections[index] = sections[index - 1];
+      sections[index - 1] = temp;
+      pushToHistory({ ...pageData, sections });
+      toast.info(`Moved ${sections[index - 1].type.replace("_", " ")} up`);
+    } else if (action === "move_down") {
+      if (index >= sections.length - 1) {
+        toast.info("Section is already at the bottom");
+        return;
+      }
+      const temp = sections[index];
+      sections[index] = sections[index + 1];
+      sections[index + 1] = temp;
+      pushToHistory({ ...pageData, sections });
+      toast.info(`Moved ${sections[index + 1].type.replace("_", " ")} down`);
+    } else if (action === "duplicate") {
+      const original = sections[index];
+      const newSec: SectionBlock = {
+        ...structuredClone(original),
+        id: `sec-${original.type}-${Date.now().toString(36).slice(-4)}`,
+      };
+      sections.splice(index + 1, 0, newSec);
+      pushToHistory({ ...pageData, sections });
+      setSelectedSectionId(newSec.id);
+      toast.success(`Duplicated ${original.type.replace("_", " ")} section`);
+    } else if (action === "hide") {
+      sections[index] = { ...sections[index], enabled: false };
+      pushToHistory({ ...pageData, sections });
+      toast.info(`Hidden ${sections[index].type.replace("_", " ")} section`);
+    } else if (action === "inspect") {
+      setSelectedSectionId(secId);
+      setShowToolsPanel(true);
+    }
   };
 
   const handleScrollToSection = (sectionId: string) => {
@@ -1272,7 +1319,7 @@ export default function WebsiteEditorPage({
                 )}
               </button>
 
-              {/* Customize Slide-Over Button */}
+              {/* Customize / Inspector Toggle Button */}
               <button
                 onClick={() => {
                   setShowToolsPanel(!showToolsPanel);
@@ -1283,10 +1330,10 @@ export default function WebsiteEditorPage({
                     ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))]"
                     : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
                 }`}
-                title="Customize Theme, Media, Buttons, and SEO"
+                title="Toggle Studio Inspector Panel"
               >
-                <Layers size={14} />
-                <span className="hidden sm:inline">Customize</span>
+                <Sliders size={14} />
+                <span className="hidden sm:inline">Inspector</span>
               </button>
 
               {/* Save Draft Button */}
@@ -1390,12 +1437,20 @@ export default function WebsiteEditorPage({
             previewDevice={previewDevice}
             onUndo={handleUndo}
             onTypingActive={() => setSyncStatus("unsaved")}
+            selectedSectionId={selectedSectionId}
+            onSelectSection={(secId) => {
+              setSelectedSectionId(secId);
+              if (!showToolsPanel) setShowToolsPanel(true);
+            }}
+            onSectionAction={(action, secId) => {
+              handleSectionCanvasAction(action, secId);
+            }}
           />
         </div>
 
-        {/* ================= FRAMER-STYLE CUSTOMIZE SLIDE-OVER DRAWER ================= */}
+        {/* ================= DOCKED RIGHT STUDIO INSPECTOR PANEL ================= */}
         {showToolsPanel && mode === "edit" && pageData && (
-          <aside className="fixed inset-y-0 right-0 top-16 z-50 w-full max-w-sm border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl flex flex-col animate-in slide-in-from-right-4 duration-200">
+          <aside className="w-80 lg:w-96 shrink-0 h-full border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col z-20 shadow-xl md:shadow-none fixed md:relative inset-y-0 right-0 top-16 md:top-0 animate-in slide-in-from-right-4 duration-150">
             <InspectorPanel
               site={pageData}
               onChange={pushToHistory}
@@ -1404,6 +1459,18 @@ export default function WebsiteEditorPage({
               onScrollToSection={handleScrollToSection}
               onClose={() => setShowToolsPanel(false)}
               onOpenImageModal={(targetField) => {
+                if (targetField.startsWith("doctor.")) {
+                  const docId = targetField.replace("doctor.", "");
+                  const doctorsData = pageData.sections.find((s) => s.type === "doctors")?.data as DoctorsSectionData | undefined;
+                  const doc = doctorsData?.doctors?.find((d) => d.id === docId);
+                  setUploadModal({
+                    isOpen: true,
+                    target: { type: "doctor", id: docId },
+                    title: `Upload Photo for ${doc?.name || "Doctor"}`,
+                    currentUrl: doc?.imageUrl,
+                  });
+                  return;
+                }
                 const targetObj = targetField === "logoUrl" ? "logo" : "hero";
                 const navData = pageData.sections.find((s) => s.type === "navbar")?.data as NavbarSectionData | undefined;
                 const heroData = pageData.sections.find((s) => s.type === "hero")?.data as HeroSectionData | undefined;

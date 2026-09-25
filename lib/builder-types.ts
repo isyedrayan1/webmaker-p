@@ -263,11 +263,23 @@ export type SectionType =
   | "booking"
   | "footer";
 
+export interface SectionStyleConfig {
+  layoutPreset?: string;
+  surfaceStyle?: "default" | "card" | "tint" | "contrast";
+  verticalPadding?: "compact" | "balanced" | "spacious";
+  contentAlignment?: "left" | "center";
+  containerWidth?: "narrow" | "standard" | "wide" | "full";
+  cardRadius?: "sharp" | "smooth" | "pill";
+  cardElevation?: "none" | "subtle" | "elevated";
+  cardBorder?: "none" | "hairline" | "accent";
+}
+
 export interface SectionBlock {
   id: string;
   type: SectionType;
   enabled: boolean;
   order: number;
+  style?: SectionStyleConfig;
   data:
     | NavbarSectionData
     | HeroSectionData

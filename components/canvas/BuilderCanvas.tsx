@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { LandingPageData } from "@/lib/builder-types";
+import {
+  THEME_PALETTES,
+  type LandingPageData,
+  type SectionBlock,
+} from "@/lib/builder-types";
 import { compileLandingPageToHtml, resolveButtonProps } from "@/lib/static-compiler";
 import { Laptop, Tablet, Smartphone } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +21,9 @@ interface BuilderCanvasProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onTypingActive?: () => void;
+  selectedSectionId?: string | null;
+  onSelectSection?: (sectionId: string) => void;
+  onSectionAction?: (action: string, sectionId: string) => void;
 }
 
 const DEVICE_CONFIGS = {
@@ -40,6 +47,43 @@ const DEVICE_CONFIGS = {
   },
 };
 
+function extractFieldDiffs(
+  prevSec: SectionBlock | undefined,
+  currSec: SectionBlock
+): { field: string; value: string }[] {
+  if (!prevSec) return [];
+  const diffs: { field: string; value: string }[] = [];
+  const pData = (prevSec.data || {}) as unknown as Record<string, unknown>;
+  const cData = (currSec.data || {}) as unknown as Record<string, unknown>;
+
+  const checkObject = (prefix: string, pObj: Record<string, unknown>, cObj: Record<string, unknown>) => {
+    for (const key of Object.keys(cObj)) {
+      const pVal = pObj[key];
+      const cVal = cObj[key];
+      if (typeof cVal === "string" && pVal !== cVal) {
+        diffs.push({ field: `${prefix}.${key}`, value: cVal });
+      } else if (Array.isArray(cVal) && Array.isArray(pVal)) {
+        cVal.forEach((item, idx) => {
+          const pItem = pVal[idx];
+          if (item && typeof item === "object") {
+            for (const itemKey of Object.keys(item as Record<string, unknown>)) {
+              const pItemVal = (pItem as Record<string, unknown>)?.[itemKey];
+              const cItemVal = (item as Record<string, unknown>)[itemKey];
+              if (typeof cItemVal === "string" && pItemVal !== cItemVal) {
+                diffs.push({ field: `${prefix}.${key}.${idx}.${itemKey}`, value: cItemVal });
+              }
+            }
+          }
+        });
+      }
+    }
+  };
+
+  const prefix = currSec.type === "why_us" ? "whyUs" : currSec.type;
+  checkObject(prefix, pData, cData);
+  return diffs;
+}
+
 export function BuilderCanvas({
   site,
   onChange,
@@ -47,14 +91,18 @@ export function BuilderCanvas({
   previewDevice,
   onUndo,
   onTypingActive,
+  selectedSectionId,
+  onSelectSection,
+  onSectionAction,
 }: BuilderCanvasProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const prevSiteRef = useRef<LandingPageData | null>(null);
 
   const activeConfig = DEVICE_CONFIGS[previewDevice];
   const [scale, setScale] = useState<number>(1);
 
-  // Proportional 2D Auto-Scaler: Preserves the authentic smartphone/tablet aspect ratio while scaling to fit 100% in viewport
+  // Proportional 2D Auto-Scaler for simulator
   useEffect(() => {
     if (mode !== "preview") return;
 
@@ -75,58 +123,100 @@ export function BuilderCanvas({
     return () => window.removeEventListener("resize", computeScale);
   }, [mode, previewDevice, activeConfig.width, activeConfig.height]);
 
-  // Compile standalone HTML for the iframe.
-  // We serialize sections + theme + mode to avoid tearing down the iframe on keystroke changes in SEO or button inspector!
+  // Only trigger full iframe HTML recompile on real structural changes:
+  // (section count, ordering, enable toggling, visual modes, or array lengths)
   const isEditable = mode === "edit";
-  const structuralKey = useMemo(() => {
+  const structuralSignature = useMemo(() => {
     return JSON.stringify({
       id: site.id,
-      theme: site.theme,
       mode: mode,
-      assets: site.assets,
       sections: site.sections.map((s) => {
-        const d = ((s.data || {}) as unknown) as Record<string, unknown>;
+        const sData = (s.data || {}) as unknown as Record<string, unknown>;
         return {
           id: s.id,
-          enabled: s.enabled,
-          order: s.order,
           type: s.type,
-          logoMode: d.logoMode,
-          logoType: d.logoType,
-          logoUrl: d.logoUrl,
-          accentWord: d.accentWord,
-          visualMode: d.visualMode,
-          imageUrl: d.imageUrl,
-          doctors: Array.isArray(d.doctors)
-            ? (d.doctors as Array<{ id: string; imageUrl?: string }>).map((doc) => ({
-                id: doc.id,
-                imageUrl: doc.imageUrl,
-              }))
-            : undefined,
-          services: Array.isArray(d.services)
-            ? (d.services as Array<{ id: string; imageUrl?: string }>).map((srv) => ({
-                id: srv.id,
-                imageUrl: srv.imageUrl,
-              }))
-            : undefined,
+          enabled: s.enabled !== false,
+          visualMode: sData.visualMode,
+          logoMode: sData.logoMode,
+          layoutPreset: s.style?.layoutPreset,
+          itemsCount:
+            Array.isArray(sData.services)
+              ? sData.services.length
+              : Array.isArray(sData.doctors)
+              ? sData.doctors.length
+              : Array.isArray(sData.reviews)
+              ? sData.reviews.length
+              : Array.isArray(sData.stats)
+              ? sData.stats.length
+              : Array.isArray(sData.pillars)
+              ? sData.pillars.length
+              : Array.isArray(sData.schedule)
+              ? sData.schedule.length
+              : 0,
         };
       }),
     });
-  }, [site.id, site.theme, mode, site.sections, site.assets]);
+  }, [site.id, mode, site.sections]);
 
   const compiledHtml = useMemo(() => {
     return compileLandingPageToHtml(site, isEditable);
-    // In edit mode we re-compile whenever structural or visual media properties change!
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode === "preview" ? site : structuralKey, isEditable]);
+  }, [structuralSignature, isEditable]);
 
-  // Push instant live updates to iframe DOM via postMessage on SEO or button changes (0ms delay, ZERO reload!)
+  // Push 0ms live hot updates to iframe DOM via postMessage (Zero reload!)
   useEffect(() => {
     if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    const cw = iframeRef.current.contentWindow;
 
-    // 1. Live SEO update
-    if (site.seo) {
-      iframeRef.current.contentWindow.postMessage(
+    const prevSite = prevSiteRef.current;
+    if (!prevSite) {
+      prevSiteRef.current = structuredClone(site);
+      return;
+    }
+
+    // 1. Theme Palette hot patch
+    if (site.theme !== prevSite.theme) {
+      cw.postMessage(
+        {
+          type: "HOT_UPDATE_THEME",
+          theme: THEME_PALETTES[site.theme] || THEME_PALETTES.emerald,
+        },
+        "*"
+      );
+    }
+
+    // 2. Section Styles & Content Fields hot patch
+    site.sections.forEach((currSec) => {
+      const prevSec = prevSite.sections.find((s) => s.id === currSec.id);
+      if (!prevSec || JSON.stringify(currSec.style) !== JSON.stringify(prevSec.style)) {
+        cw.postMessage(
+          {
+            type: "HOT_UPDATE_SECTION_STYLE",
+            sectionId: currSec.id,
+            sectionType: currSec.type,
+            style: currSec.style,
+          },
+          "*"
+        );
+      }
+
+      // Content Fields hot patch
+      const diffs = extractFieldDiffs(prevSec, currSec);
+      diffs.forEach(({ field, value }) => {
+        cw.postMessage(
+          {
+            type: "HOT_UPDATE_FIELD",
+            field,
+            value,
+          },
+          "*"
+        );
+      });
+    });
+
+    // 3. Live SEO update
+    if (site.seo && JSON.stringify(site.seo) !== JSON.stringify(prevSite.seo)) {
+      cw.postMessage(
         {
           type: "UPDATE_SEO",
           title: site.seo.title,
@@ -136,11 +226,11 @@ export function BuilderCanvas({
       );
     }
 
-    // 2. Live Button Configs update
-    if (site.buttonConfigs) {
+    // 4. Live Button Configs update
+    if (site.buttonConfigs && JSON.stringify(site.buttonConfigs) !== JSON.stringify(prevSite.buttonConfigs)) {
       Object.entries(site.buttonConfigs).forEach(([btnId, cfg]) => {
         const resolved = resolveButtonProps(btnId, cfg.label || "", cfg.target || "#booking", cfg.variant || "btn-primary", site);
-        iframeRef.current?.contentWindow?.postMessage(
+        cw.postMessage(
           {
             type: "UPDATE_BUTTON",
             buttonId: btnId,
@@ -153,12 +243,57 @@ export function BuilderCanvas({
         );
       });
     }
-  }, [site.seo, site.buttonConfigs, site]);
 
-  // Listen for bidirectional text edits and guardrail events from inside the iframe
+    // 5. Live Hero / Navbar / Doctor Image updates
+    const currHero = site.sections.find((s) => s.type === "hero");
+    const prevHero = prevSite.sections.find((s) => s.type === "hero");
+    const currHeroImg = (currHero?.data as unknown as Record<string, unknown>)?.imageUrl as string | undefined;
+    const prevHeroImg = (prevHero?.data as unknown as Record<string, unknown>)?.imageUrl as string | undefined;
+    if (currHeroImg && currHeroImg !== prevHeroImg) {
+      cw.postMessage({ type: "HOT_UPDATE_IMAGE", target: "hero", url: currHeroImg }, "*");
+    }
+
+    const currNav = site.sections.find((s) => s.type === "navbar");
+    const prevNav = prevSite.sections.find((s) => s.type === "navbar");
+    const currLogoImg = (currNav?.data as unknown as Record<string, unknown>)?.logoUrl as string | undefined;
+    const prevLogoImg = (prevNav?.data as unknown as Record<string, unknown>)?.logoUrl as string | undefined;
+    if (currLogoImg && currLogoImg !== prevLogoImg) {
+      cw.postMessage({ type: "HOT_UPDATE_IMAGE", target: "logo", url: currLogoImg }, "*");
+    }
+
+    prevSiteRef.current = structuredClone(site);
+  }, [site]);
+
+  // Sync active section highlight with iframe overlay
+  useEffect(() => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage(
+      {
+        type: "SET_ACTIVE_SECTION",
+        sectionId: selectedSectionId,
+      },
+      "*"
+    );
+  }, [selectedSectionId]);
+
+  // Listen for bidirectional events from inside the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (!event.data) return;
+
+      if (event.data.type === "CANVAS_SECTION_SELECT") {
+        if (onSelectSection && event.data.sectionId) {
+          onSelectSection(event.data.sectionId);
+        }
+        return;
+      }
+
+      if (event.data.type === "CANVAS_SECTION_ACTION") {
+        if (onSectionAction && event.data.action && event.data.sectionId) {
+          onSectionAction(event.data.action, event.data.sectionId);
+        }
+        return;
+      }
 
       if (event.data.type === "CANVAS_LIMIT_EXCEEDED") {
         const { maxLength, field } = event.data;
@@ -218,7 +353,7 @@ export function BuilderCanvas({
         if (!field) return;
 
         const parts = field.split(".");
-        const sectionType = parts[0];
+        const sectionType = parts[0] === "whyUs" ? "why_us" : parts[0];
 
         let newSiteName = site.name;
         if (sectionType === "navbar" && parts[1] === "hospitalName" && value) {
@@ -251,16 +386,29 @@ export function BuilderCanvas({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [site, onChange, onUndo, onTypingActive]);
+  }, [site, onChange, onUndo, onTypingActive, onSelectSection, onSectionAction]);
 
-  // 1. EDIT MODE: 100% Full-Bleed Fluid Canvas
+  // 1. EDIT MODE: 100% Full-Bleed Fluid Canvas (Stable Iframe Key: Zero Reloads!)
   if (mode === "edit") {
     return (
       <div className="w-full h-full min-h-[calc(100vh-64px)] bg-white flex-1 relative overflow-hidden">
         <iframe
-          key={`${site.id}-edit-${structuralKey}`}
+          key={`${site.id}-edit`}
           ref={iframeRef}
           srcDoc={compiledHtml}
+          onLoad={() => {
+            try {
+              if (selectedSectionId) {
+                iframeRef.current?.contentWindow?.postMessage(
+                  {
+                    type: "SET_ACTIVE_SECTION",
+                    sectionId: selectedSectionId,
+                  },
+                  "*"
+                );
+              }
+            } catch {}
+          }}
           title="Live Studio Builder Canvas"
           className="w-full h-full min-h-[calc(100vh-64px)] border-none bg-white"
           sandbox="allow-scripts allow-forms allow-modals"
@@ -321,7 +469,7 @@ export function BuilderCanvas({
           }}
         >
           <iframe
-            key={`${site.id}-preview-${previewDevice}-${structuralKey}`}
+            key={`${site.id}-preview-${previewDevice}`}
             ref={iframeRef}
             srcDoc={compiledHtml}
             onLoad={() => {

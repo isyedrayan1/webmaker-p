@@ -14,6 +14,8 @@ import {
   type ServicesSectionData,
   type StatsSectionData,
   type WhyUsSectionData,
+  type SectionStyleConfig,
+  type SectionBlock,
 } from "./builder-types";
 
 function escapeHtml(text?: string | null): string {
@@ -83,7 +85,8 @@ export function resolveButtonProps(
 function renderHero(
   hero: Partial<HeroSectionData>,
   editAttr: string,
-  site?: LandingPageData | null
+  site?: LandingPageData | null,
+  preset?: string
 ): string {
   const primaryBtn = resolveButtonProps(
     "hero.primaryCta",
@@ -109,7 +112,7 @@ function renderHero(
 
   const showBadge = hero.showBadge !== false && (hero.badge || editAttr);
   const showSecondary = hero.showSecondaryCta !== false && (hero.secondaryCta || editAttr);
-  const visualMode = hero.visualMode || (hero.imageUrl ? "image" : "action_card");
+  const visualMode = preset === "action_card_right" ? "action_card" : hero.visualMode || (hero.imageUrl ? "image" : "action_card");
 
   let visualColumnHtml = "";
   if (visualMode === "image") {
@@ -173,6 +176,80 @@ function renderHero(
         </div>`;
   }
 
+  if (preset === "minimal_text") {
+    return `
+  <!-- HERO SECTION (MINIMALIST TEXT) -->
+  <section id="hero" style="background: linear-gradient(180deg, var(--bg-light) 0%, rgba(255,255,255,0.7) 100%); border-bottom: 1px solid var(--border-light); padding: 6.5rem 0;">
+    <div class="container">
+      <div class="hero-minimal-layout">
+        ${
+          showBadge
+            ? `<div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 9999px; background-color: rgba(0,0,0,0.04); border: 1px solid var(--border-light); font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-bottom: 1.5rem;">
+          ${ICONS.shield} <span ${editAttr} data-field="hero.badge">${escapeHtml(hero.badge || "Trusted Community Healthcare")}</span>
+        </div>`
+            : ""
+        }
+        <h1 class="font-serif section-title" style="margin: 0 auto 1.5rem auto; max-width: 22ch; font-size: 3.25rem; word-break: break-word; overflow-wrap: break-word;" ${editAttr} data-field="hero.headline">
+          ${escapeHtml(hero.headline || "Comprehensive Care Close to Home.")}
+        </h1>
+        <p class="section-desc" style="margin: 0 auto 2rem auto; max-width: 62ch; font-size: 1.15rem; white-space: pre-line; word-break: break-word; overflow-wrap: break-word;" ${editAttr} data-field="hero.subheadline">
+          ${escapeHtml(hero.subheadline || "Compassionate, high-precision medical care backed by board-certified specialists.")}
+        </p>
+        <div class="hero-cta-group" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center;">
+          <a href="${primaryBtn.href}" ${primaryBtn.targetAttr} data-btn-id="hero.primaryCta" class="btn ${primaryBtn.variantClass}" style="padding: 1rem 2.25rem; font-size: 1rem;" ${editAttr} data-field="hero.primaryCta">${escapeHtml(primaryBtn.label)}</a>
+          ${
+            showSecondary
+              ? `<a href="${secondaryBtn.href}" ${secondaryBtn.targetAttr} data-btn-id="hero.secondaryCta" class="btn ${secondaryBtn.variantClass}" style="padding: 1rem 2rem;" ${editAttr} data-field="hero.secondaryCta">${escapeHtml(secondaryBtn.label)}</a>`
+              : ""
+          }
+        </div>
+        ${
+          hero.trustSnippet || editAttr
+            ? `<p style="margin-top: 1.75rem; font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 0.4rem; justify-content: center;">
+          ${ICONS.check} <span ${editAttr} data-field="hero.trustSnippet">${escapeHtml(hero.trustSnippet || "Accepting all major insurance providers · Same-day walk-ins welcome")}</span>
+        </p>`
+            : ""
+        }
+      </div>
+    </div>
+  </section>`;
+  }
+
+  if (preset === "centered_editorial") {
+    return `
+  <!-- HERO SECTION (CENTERED EDITORIAL) -->
+  <section id="hero" style="background: linear-gradient(180deg, var(--bg-light) 0%, rgba(255,255,255,0.7) 100%); border-bottom: 1px solid var(--border-light);">
+    <div class="container">
+      <div class="hero-centered-layout">
+        ${
+          showBadge
+            ? `<div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 9999px; background-color: rgba(0,0,0,0.04); border: 1px solid var(--border-light); font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-bottom: 1.25rem;">
+          ${ICONS.shield} <span ${editAttr} data-field="hero.badge">${escapeHtml(hero.badge || "Trusted Community Healthcare")}</span>
+        </div>`
+            : ""
+        }
+        <h1 class="font-serif section-title" style="margin: 0 auto 1.25rem auto; max-width: 24ch; word-break: break-word; overflow-wrap: break-word;" ${editAttr} data-field="hero.headline">
+          ${escapeHtml(hero.headline || "Comprehensive Care Close to Home.")}
+        </h1>
+        <p class="section-desc" style="margin: 0 auto 1.75rem auto; max-width: 65ch; white-space: pre-line; word-break: break-word; overflow-wrap: break-word;" ${editAttr} data-field="hero.subheadline">
+          ${escapeHtml(hero.subheadline || "Compassionate, high-precision medical care backed by board-certified specialists.")}
+        </p>
+        <div class="hero-cta-group" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; margin-bottom: 2.5rem;">
+          <a href="${primaryBtn.href}" ${primaryBtn.targetAttr} data-btn-id="hero.primaryCta" class="btn ${primaryBtn.variantClass}" style="padding: 0.9rem 2rem; font-size: 1rem;" ${editAttr} data-field="hero.primaryCta">${escapeHtml(primaryBtn.label)}</a>
+          ${
+            showSecondary
+              ? `<a href="${secondaryBtn.href}" ${secondaryBtn.targetAttr} data-btn-id="hero.secondaryCta" class="btn ${secondaryBtn.variantClass}" style="padding: 0.9rem 1.75rem;" ${editAttr} data-field="hero.secondaryCta">${escapeHtml(secondaryBtn.label)}</a>`
+              : ""
+          }
+        </div>
+        <div style="width: 100%; max-width: 880px;">
+          ${visualColumnHtml}
+        </div>
+      </div>
+    </div>
+  </section>`;
+  }
+
   const isEditorial = visualMode === "editorial";
 
   return `
@@ -217,13 +294,36 @@ function renderHero(
   </section>`;
 }
 
-function renderStats(stats: Partial<StatsSectionData>, editAttr: string): string {
+function renderStats(stats: Partial<StatsSectionData>, editAttr: string, preset?: string): string {
   const items = stats.items || [
     { id: "1", value: "22+", label: "Years of Service", subtext: "Serving local families" },
     { id: "2", value: "48", label: "Specialist Physicians", subtext: "Board-certified doctors" },
     { id: "3", value: "99.4%", label: "Patient Satisfaction", subtext: "Verified surveys" },
     { id: "4", value: "140K+", label: "Patients Treated", subtext: "Comprehensive care" },
   ];
+
+  if (preset === "inline_bar") {
+    return `
+  <!-- STATS INLINE RIBBON -->
+  <section id="stats" style="background-color: #ffffff; border-bottom: 1px solid var(--border-light); padding: 2.5rem 0;">
+    <div class="container">
+      <div class="stats-inline-bar">
+        ${items
+          .map(
+            (item, index) => `
+        <div class="stats-inline-item">
+          <div class="font-serif" style="font-size: 2.5rem; color: var(--primary); font-weight: bold; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums;" ${editAttr} data-field="stats.items.${index}.value">${escapeHtml(item.value)}</div>
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; word-break: break-word;" ${editAttr} data-field="stats.items.${index}.label">${escapeHtml(item.label)}</div>
+            ${item.subtext || editAttr ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; word-break: break-word;" ${editAttr} data-field="stats.items.${index}.subtext">${escapeHtml(item.subtext)}</div>` : ""}
+          </div>
+        </div>`
+          )
+          .join("")}
+      </div>
+    </div>
+  </section>`;
+  }
 
   return `
   <!-- STATS COUNTER -->
@@ -245,12 +345,44 @@ function renderStats(stats: Partial<StatsSectionData>, editAttr: string): string
   </section>`;
 }
 
-function renderWhyUs(whyUs: Partial<WhyUsSectionData>, editAttr: string): string {
+function renderWhyUs(whyUs: Partial<WhyUsSectionData>, editAttr: string, preset?: string): string {
   const pillars = whyUs.pillars || [
     { id: "1", title: "Board-Certified Specialists", description: "Dedicated to evidence-based treatment plans." },
     { id: "2", title: "Zero Long Waiting Times", description: "Streamlined check-in so you receive care promptly." },
     { id: "3", title: "Advanced On-Site Lab", description: "Rapid testing and imaging results delivered within visit." },
   ];
+
+  if (preset === "split_list") {
+    return `
+  <!-- WHY CHOOSE US (SPLIT 50/50 LIST) -->
+  <section id="why-us">
+    <div class="container">
+      <div class="whyus-split-container">
+        <div>
+          ${whyUs.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="whyUs.eyebrow">${escapeHtml(whyUs.eyebrow || "Why Choose Us")}</span>` : ""}
+          <h2 class="section-title" style="margin: 0.5rem 0 1rem 0; word-break: break-word;" ${editAttr} data-field="whyUs.headline">${escapeHtml(whyUs.headline || "Patient-First Medicine with Clear, Transparent Care.")}</h2>
+          ${whyUs.description || editAttr ? `<p class="section-desc" style="max-width: 55ch; word-break: break-word;" ${editAttr} data-field="whyUs.description">${escapeHtml(whyUs.description || "We combine medical expertise with warmth and personal attention.")}</p>` : ""}
+        </div>
+        <div class="whyus-stacked-list">
+          ${pillars
+            .map(
+              (pillar, index) => `
+          <div class="card" style="display: flex; gap: 1.5rem; align-items: flex-start; padding: 1.5rem 2rem;">
+            <div class="icon-box" style="flex-shrink: 0;">
+              ${ICONS.shield}
+            </div>
+            <div>
+              <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.35rem; word-break: break-word;" ${editAttr} data-field="whyUs.pillars.${index}.title">${escapeHtml(pillar.title)}</h3>
+              <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; word-break: break-word;" ${editAttr} data-field="whyUs.pillars.${index}.description">${escapeHtml(pillar.description)}</p>
+            </div>
+          </div>`
+            )
+            .join("")}
+        </div>
+      </div>
+    </div>
+  </section>`;
+  }
 
   return `
   <!-- WHY CHOOSE US -->
@@ -280,12 +412,17 @@ function renderWhyUs(whyUs: Partial<WhyUsSectionData>, editAttr: string): string
   </section>`;
 }
 
-function renderServices(services: Partial<ServicesSectionData>, editAttr: string): string {
+function renderServices(services: Partial<ServicesSectionData>, editAttr: string, preset?: string): string {
   const serviceList = services.services || [
     { id: "1", name: "Primary & Family Medicine", badge: "All Ages", description: "Routine physicals, vaccinations, and chronic care management.", highlights: ["Screenings", "Immunizations"] },
     { id: "2", name: "Cardiovascular Care", badge: "Specialized", description: "Cardiac diagnostics, echocardiograms, and hypertension management.", highlights: ["ECG", "Echocardiogram"] },
     { id: "3", name: "Orthopedics & Rehab", badge: "Rapid Recovery", description: "Joint preservation, fracture care, and physical rehabilitation.", highlights: ["Rehab", "Therapy"] },
   ];
+
+  let gridClass = "grid-services";
+  if (preset === "grid_4") gridClass = "grid-services-4";
+  else if (preset === "grid_2") gridClass = "grid-services-2";
+  else if (preset === "carousel") gridClass = "services-carousel-track";
 
   return `
   <!-- SERVICES GRID -->
@@ -297,7 +434,7 @@ function renderServices(services: Partial<ServicesSectionData>, editAttr: string
         ${services.description || editAttr ? `<p class="section-desc" style="margin: 1rem auto 0 auto; max-width: 65ch; word-break: break-word;" ${editAttr} data-field="services.description">${escapeHtml(services.description || "From preventive family wellness to specialized interventions.")}</p>` : ""}
       </div>
 
-      <div class="grid-services">
+      <div class="${gridClass}">
         ${serviceList
           .map(
             (srv, index) => `
@@ -327,12 +464,51 @@ function renderServices(services: Partial<ServicesSectionData>, editAttr: string
   </section>`;
 }
 
-function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string): string {
+function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string, preset?: string): string {
   const doctorList = doctors.doctors || [
     { id: "1", name: "Dr. Eleanor Vance, MD", role: "Chief of Cardiology", credentials: "Harvard Medical · FACC", experience: "16+ Years Experience" },
     { id: "2", name: "Dr. Marcus Thorne, MD", role: "Lead Orthopedic Surgeon", credentials: "Johns Hopkins · FAAOS", experience: "14+ Years Experience" },
     { id: "3", name: "Dr. Maya Patel, MD", role: "Director of Pediatrics", credentials: "Stanford Medicine · FAAP", experience: "12+ Years Experience" },
   ];
+
+  if (preset === "list_detailed") {
+    return `
+  <!-- DOCTOR ROSTER (DETAILED BIOS LIST) -->
+  <section id="doctors">
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 3.5rem;">
+        ${doctors.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="doctors.eyebrow">${escapeHtml(doctors.eyebrow || "Medical Leadership")}</span>` : ""}
+        <h2 class="section-title" style="margin: 0.5rem auto 0 auto; word-break: break-word;" ${editAttr} data-field="doctors.headline">${escapeHtml(doctors.headline || "Meet Our Dedicated Specialists.")}</h2>
+        ${doctors.description || editAttr ? `<p class="section-desc" style="margin: 1rem auto 0 auto; max-width: 65ch; word-break: break-word;" ${editAttr} data-field="doctors.description">${escapeHtml(doctors.description || "Experienced physicians who treat you with warmth and respect.")}</p>` : ""}
+      </div>
+
+      <div class="grid-doctors-list">
+        ${doctorList
+          .map(
+            (doc, index) => `
+        <div class="card card-doctor-horizontal">
+          ${
+            doc.imageUrl
+              ? `<img src="${escapeHtml(doc.imageUrl)}" alt="${escapeHtml(doc.name)}" class="card-doctor-avatar" style="object-fit: cover;" />`
+              : `<div class="card-doctor-avatar">${escapeHtml(doc.name.charAt(4) || "Dr")}</div>`
+          }
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="font-size: 1.35rem; font-weight: 700; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.name">${escapeHtml(doc.name)}</h3>
+              <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted); background: var(--bg-light); padding: 0.25rem 0.6rem; border-radius: 6px;" ${editAttr} data-field="doctors.doctors.${index}.experience">${escapeHtml(doc.experience)}</span>
+            </div>
+            <p style="color: var(--primary); font-weight: 600; font-size: 0.95rem; margin-top: 0.25rem; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.role">${escapeHtml(doc.role)}</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; word-break: break-word;" ${editAttr} data-field="doctors.doctors.${index}.credentials">${escapeHtml(doc.credentials)}</p>
+          </div>
+        </div>`
+          )
+          .join("")}
+      </div>
+    </div>
+  </section>`;
+  }
+
+  const gridClass = preset === "grid_4" ? "grid-doctors-4" : "grid-doctors";
 
   return `
   <!-- DOCTOR ROSTER -->
@@ -344,7 +520,7 @@ function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string): 
         ${doctors.description || editAttr ? `<p class="section-desc" style="margin: 1rem auto 0 auto; max-width: 65ch; word-break: break-word;" ${editAttr} data-field="doctors.description">${escapeHtml(doctors.description || "Experienced physicians who treat you with warmth and respect.")}</p>` : ""}
       </div>
 
-      <div class="grid-doctors">
+      <div class="${gridClass}">
         ${doctorList
           .map(
             (doc, index) => `
@@ -370,13 +546,69 @@ function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string): 
   </section>`;
 }
 
-function renderReviews(reviews: Partial<ReviewsSectionData>, editAttr: string): string {
+function renderReviews(reviews: Partial<ReviewsSectionData>, editAttr: string, preset?: string): string {
   const showSummary = reviews.showRatingSummary !== false && (reviews.ratingAverage || editAttr);
   const reviewList = reviews.reviews || [
     { id: "1", quote: "Dr. Vance took time to explain everything clearly. Exceptional clinic experience.", patientName: "Robert C.", treatment: "Cardiology Patient" },
     { id: "2", quote: "Our whole family visits here. The staff is gentle and thorough.", patientName: "Sarah M.", treatment: "Family Medicine" },
     { id: "3", quote: "Had me back on my feet in 8 weeks after a sports injury. Modern and clean facility.", patientName: "David L.", treatment: "Orthopedics" },
   ];
+
+  if (preset === "featured_quote" && reviewList.length > 0) {
+    const featured = reviewList[0];
+    const secondaryReviews = reviewList.slice(1);
+
+    return `
+  <!-- PATIENT REVIEWS (FEATURED BANNER) -->
+  <section id="reviews" style="background-color: #ffffff; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 2.5rem;">
+        ${reviews.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="reviews.eyebrow">${escapeHtml(reviews.eyebrow || "Patient Feedback")}</span>` : ""}
+        <h2 class="section-title" style="margin: 0.5rem auto 0 auto; word-break: break-word;" ${editAttr} data-field="reviews.headline">${escapeHtml(reviews.headline || "Real Stories from Patients We've Cared For.")}</h2>
+      </div>
+
+      <!-- Prominent Featured Quote Card -->
+      <div class="card review-featured-card">
+        <div style="display: inline-flex; gap: 4px; color: var(--primary); margin-bottom: 0.5rem;">
+          ${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star}
+        </div>
+        <p class="review-featured-quote" ${editAttr} data-field="reviews.reviews.0.quote">"${escapeHtml(featured.quote)}"</p>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+          <strong style="font-size: 1rem;" ${editAttr} data-field="reviews.reviews.0.patientName">${escapeHtml(featured.patientName)}</strong>
+          <span style="color: var(--text-muted); font-size: 0.85rem;">·</span>
+          <span style="color: var(--text-muted); font-size: 0.85rem;" ${editAttr} data-field="reviews.reviews.0.treatment">${escapeHtml(featured.treatment)}</span>
+        </div>
+      </div>
+
+      ${
+        secondaryReviews.length > 0
+          ? `<div class="grid-reviews-2">
+        ${secondaryReviews
+          .map(
+            (rev, sIdx) => {
+              const realIndex = sIdx + 1;
+              return `
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; min-width: 0;">
+            <div style="flex: 1;">
+              <div style="display: flex; gap: 2px; margin-bottom: 0.75rem;">${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star} ${ICONS.star}</div>
+              <p style="font-style: italic; color: var(--text-dark); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; word-break: break-word;" ${editAttr} data-field="reviews.reviews.${realIndex}.quote">"${escapeHtml(rev.quote)}"</p>
+            </div>
+            <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; margin-top: auto; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); gap: 0.5rem;">
+              <strong style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" ${editAttr} data-field="reviews.reviews.${realIndex}.patientName">${escapeHtml(rev.patientName)}</strong>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;" ${editAttr} data-field="reviews.reviews.${realIndex}.treatment">${escapeHtml(rev.treatment)}</span>
+            </div>
+          </div>`;
+            }
+          )
+          .join("")}
+      </div>`
+          : ""
+      }
+    </div>
+  </section>`;
+  }
+
+  const gridClass = preset === "masonry_2" ? "grid-reviews-2" : "grid-reviews";
 
   return `
   <!-- PATIENT REVIEWS -->
@@ -396,7 +628,7 @@ function renderReviews(reviews: Partial<ReviewsSectionData>, editAttr: string): 
         }
       </div>
 
-      <div class="grid-reviews">
+      <div class="${gridClass}">
         ${reviewList
           .map(
             (rev, index) => `
@@ -417,23 +649,68 @@ function renderReviews(reviews: Partial<ReviewsSectionData>, editAttr: string): 
   </section>`;
 }
 
-function renderHours(hours: Partial<HoursSectionData>, editAttr: string): string {
-  return `
-  <!-- HOURS SECTION -->
+function renderHours(hours: Partial<HoursSectionData>, editAttr: string, preset?: string): string {
+  const scheduleItems = hours.schedule || [
+    { day: "Monday – Friday", hours: "8:00 AM – 7:00 PM" },
+    { day: "Saturday", hours: "9:00 AM – 5:00 PM" },
+    { day: "Sunday", hours: "9:00 AM – 2:00 PM (Urgent Care)" },
+  ];
+
+  if (preset === "split_table") {
+    return `
+  <!-- HOURS SECTION (SPLIT TABLE) -->
   <section id="hours" style="background-color: #ffffff;">
     <div class="container">
-      <div style="max-width: 750px; margin: 0 auto; text-align: center;">
+      <div class="grid-hours">
+        <div>
+          ${hours.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="hours.eyebrow">${escapeHtml(hours.eyebrow || "Operating Schedule")}</span>` : ""}
+          <h2 class="section-title" style="word-break: break-word;" ${editAttr} data-field="hours.headline">${escapeHtml(hours.headline || "Clinic Hours & Urgent Availability.")}</h2>
+          ${hours.description || editAttr ? `<p class="section-desc" style="word-break: break-word; margin-bottom: 2rem;" ${editAttr} data-field="hours.description">${escapeHtml(hours.description || "Walk-ins welcome during regular hours. 24/7 triage for urgent care.")}</p>` : ""}
+
+          <div class="card" style="background: var(--bg-light); text-align: left;">
+            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+              ${scheduleItems
+                .map(
+                  (item, index) => `
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-light); padding-bottom: 0.5rem; font-size: 0.9rem; gap: 1rem;">
+                <span style="font-weight: 600;" ${editAttr} data-field="hours.schedule.${index}.day">${escapeHtml(item.day)}</span>
+                <span style="color: var(--text-muted); font-family: var(--font-mono);" ${editAttr} data-field="hours.schedule.${index}.hours">${escapeHtml(item.hours)}</span>
+              </div>`
+                )
+                .join("")}
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="background: linear-gradient(180deg, var(--bg-light) 0%, #ffffff 100%); border-left: 4px solid var(--primary); padding: 2.25rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <span style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; display: inline-block;"></span>
+            <strong style="color: #10b981; font-size: 0.85rem; text-transform: uppercase; font-family: var(--font-mono);">Urgent Notice</strong>
+          </div>
+          <h3 class="font-serif" style="font-size: 1.5rem; margin-bottom: 0.75rem;">After-Hours Emergency Triage</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem;" ${editAttr} data-field="hours.emergencyNotice">${escapeHtml(hours.emergencyNotice || "For acute emergencies outside operating hours, our registered nurses are available via emergency triage.")}</p>
+          <a href="tel:${hours.emergencyHotline || "1-800-HOTLINE"}" class="btn btn-primary" style="width: 100%; display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem;">
+            ${ICONS.phone} Call 24/7 Hotline
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>`;
+  }
+
+  // card_center default
+  return `
+  <!-- HOURS SECTION (CENTERED CARD) -->
+  <section id="hours" style="background-color: #ffffff;">
+    <div class="container">
+      <div class="hours-centered-layout">
         ${hours.eyebrow || editAttr ? `<span class="section-eyebrow" ${editAttr} data-field="hours.eyebrow">${escapeHtml(hours.eyebrow || "Operating Schedule")}</span>` : ""}
         <h2 class="section-title" style="word-break: break-word;" ${editAttr} data-field="hours.headline">${escapeHtml(hours.headline || "Clinic Hours & Urgent Availability.")}</h2>
-        ${hours.description || editAttr ? `<p class="section-desc" style="word-break: break-word; margin-bottom: 2.5rem;" ${editAttr} data-field="hours.description">${escapeHtml(hours.description || "Walk-ins welcome during regular hours. 24/7 triage for urgent care.")}</p>` : ""}
+        ${hours.description || editAttr ? `<p class="section-desc" style="word-break: break-word; margin: 0.5rem auto 2.5rem auto;" ${editAttr} data-field="hours.description">${escapeHtml(hours.description || "Walk-ins welcome during regular hours. 24/7 triage for urgent care.")}</p>` : ""}
 
         <div class="card" style="background: var(--bg-light); text-align: left;">
           <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-            ${(hours.schedule || [
-              { day: "Monday – Friday", hours: "8:00 AM – 7:00 PM" },
-              { day: "Saturday", hours: "9:00 AM – 5:00 PM" },
-              { day: "Sunday", hours: "9:00 AM – 2:00 PM (Urgent Care)" },
-            ])
+            ${scheduleItems
               .map(
                 (item, index) => `
             <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-light); padding-bottom: 0.5rem; font-size: 0.9rem; gap: 1rem;">
@@ -452,7 +729,8 @@ function renderHours(hours: Partial<HoursSectionData>, editAttr: string): string
 function renderBooking(
   booking: Partial<BookingSectionData>,
   editAttr: string,
-  site?: LandingPageData | null
+  site?: LandingPageData | null,
+  preset?: string
 ): string {
   const submitBtn = resolveButtonProps(
     "booking.submit",
@@ -462,7 +740,8 @@ function renderBooking(
     site
   );
 
-  const showMap = booking.showMap !== false;
+  const isCompact = preset === "compact_card";
+  const showMap = isCompact ? false : (booking.showMap !== false);
   const mapQuery = booking.mapEmbedUrl || `${booking.address || "742 Evergreen Parkway"}, ${booking.cityState || "Seattle, WA"}`;
   const mapEmbedIframeUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
 
@@ -552,10 +831,33 @@ function renderBooking(
   </section>`;
 }
 
-function renderFooter(footer: Partial<FooterSectionData>, editAttr: string, defaultName: string): string {
+function renderFooter(
+  footer: Partial<FooterSectionData>,
+  editAttr: string,
+  defaultName: string,
+  footerBlockId = "sec-footer",
+  preset?: string
+): string {
+  if (preset === "minimal_bar") {
+    return `
+  <!-- FOOTER (COMPACT BAR) -->
+  <footer id="footer" class="studio-section" data-section-id="${footerBlockId}" data-section-type="footer" data-section-name="Footer" style="background-color: var(--bg-dark); color: #ffffff; padding: 2.25rem 0; border-top: 1px solid rgba(255,255,255,0.1);">
+    <div class="container">
+      <div class="footer-minimal-bar">
+        <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; white-space: nowrap;" ${editAttr} data-field="footer.hospitalName">${escapeHtml(footer.hospitalName || defaultName)}</h3>
+          <span style="color: rgba(255,255,255,0.3);">·</span>
+          <span style="font-size: 0.82rem; color: rgba(255,255,255,0.65);" ${editAttr} data-field="footer.copyrightText">${escapeHtml(footer.copyrightText || `© 2026 ${defaultName}. All rights reserved.`)}</span>
+        </div>
+        ${footer.phone || editAttr ? `<div style="font-size: 0.85rem; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 0.4rem;">${ICONS.phone} <span ${editAttr} data-field="footer.phone">${escapeHtml(footer.phone || "+1 (206) 555-0198")}</span></div>` : ""}
+      </div>
+    </div>
+  </footer>`;
+  }
+
   return `
-  <!-- FOOTER -->
-  <footer id="footer" style="background-color: var(--bg-dark); color: #ffffff; padding: 4rem 0 2rem 0;">
+  <!-- FOOTER (4-COLUMN DIRECTORY) -->
+  <footer id="footer" class="studio-section" data-section-id="${footerBlockId}" data-section-type="footer" data-section-name="Footer" style="background-color: var(--bg-dark); color: #ffffff; padding: 4rem 0 2rem 0;">
     <div class="container">
       <div class="grid-footer">
         <div style="min-width: 0;">
@@ -626,23 +928,143 @@ export function compileLandingPageToHtml(
   );
 
   // Dynamic Section Renderers Map
-  const sectionRenderers: Record<string, (data: unknown) => string> = {
-    hero: (data) => renderHero((data || {}) as Partial<HeroSectionData>, editAttr, safeSite),
-    stats: (data) => renderStats((data || {}) as Partial<StatsSectionData>, editAttr),
-    why_us: (data) => renderWhyUs((data || {}) as Partial<WhyUsSectionData>, editAttr),
-    services: (data) => renderServices((data || {}) as Partial<ServicesSectionData>, editAttr),
-    doctors: (data) => renderDoctors((data || {}) as Partial<DoctorsSectionData>, editAttr),
-    reviews: (data) => renderReviews((data || {}) as Partial<ReviewsSectionData>, editAttr),
-    hours: (data) => renderHours((data || {}) as Partial<HoursSectionData>, editAttr),
-    booking: (data) => renderBooking((data || {}) as Partial<BookingSectionData>, editAttr, safeSite),
+  const sectionRenderers: Record<string, (data: unknown, preset?: string) => string> = {
+    hero: (data, preset) => renderHero((data || {}) as Partial<HeroSectionData>, editAttr, safeSite, preset),
+    stats: (data, preset) => renderStats((data || {}) as Partial<StatsSectionData>, editAttr, preset),
+    why_us: (data, preset) => renderWhyUs((data || {}) as Partial<WhyUsSectionData>, editAttr, preset),
+    services: (data, preset) => renderServices((data || {}) as Partial<ServicesSectionData>, editAttr, preset),
+    doctors: (data, preset) => renderDoctors((data || {}) as Partial<DoctorsSectionData>, editAttr, preset),
+    reviews: (data, preset) => renderReviews((data || {}) as Partial<ReviewsSectionData>, editAttr, preset),
+    hours: (data, preset) => renderHours((data || {}) as Partial<HoursSectionData>, editAttr, preset),
+    booking: (data, preset) => renderBooking((data || {}) as Partial<BookingSectionData>, editAttr, safeSite, preset),
   };
+
+  const SECTION_TITLES: Record<string, string> = {
+    navbar: "Navigation Bar",
+    hero: "Hero Section",
+    stats: "Proof Metrics",
+    why_us: "Why Choose Us",
+    services: "Clinical Services",
+    doctors: "Medical Staff",
+    reviews: "Patient Reviews",
+    hours: "Clinic Schedule",
+    booking: "Appointment Form",
+    footer: "Footer",
+  };
+
+  // Section Style Application Engine
+  function applySectionStyles(html: string, style?: SectionStyleConfig, sec?: SectionBlock): string {
+    let modified = html;
+
+    if (sec) {
+      const secName = SECTION_TITLES[sec.type] || sec.type;
+      modified = modified.replace(/<section\b([^>]*)>/i, (_match, attrs) => {
+        let newAttrs = attrs;
+        if (!newAttrs.includes("data-section-id=")) {
+          newAttrs += ` data-section-id="${sec.id}" data-section-type="${sec.type}" data-section-name="${secName}"`;
+        }
+        if (newAttrs.includes('class="')) {
+          newAttrs = newAttrs.replace(/class="([^"]*)"/, 'class="studio-section $1"');
+        } else {
+          newAttrs += ' class="studio-section"';
+        }
+        return `<section${newAttrs}>`;
+      });
+    }
+
+    if (!style) return modified;
+
+    let paddingOverride = "";
+    if (style.verticalPadding === "compact") {
+      paddingOverride = "padding: 3rem 0 !important;";
+    } else if (style.verticalPadding === "spacious") {
+      paddingOverride = "padding: 7.5rem 0 !important;";
+    } else if (style.verticalPadding === "balanced") {
+      paddingOverride = "padding: 5rem 0 !important;";
+    }
+
+    let surfaceOverride = "";
+    if (style.surfaceStyle === "card") {
+      surfaceOverride = "background: #ffffff !important; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);";
+    } else if (style.surfaceStyle === "tint") {
+      surfaceOverride = "background: color-mix(in srgb, var(--primary) 5%, var(--bg-light)) !important; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);";
+    } else if (style.surfaceStyle === "contrast") {
+      surfaceOverride = "background: var(--bg-dark) !important; color: #f8fafc !important;";
+    }
+
+    let containerOverride = "";
+    if (style.containerWidth === "narrow") {
+      containerOverride = "max-width: 960px !important;";
+    } else if (style.containerWidth === "wide") {
+      containerOverride = "max-width: 1440px !important;";
+    } else if (style.containerWidth === "full") {
+      containerOverride = "max-width: 100% !important; padding: 0 2rem !important;";
+    } else if (style.containerWidth === "standard") {
+      containerOverride = "max-width: 1200px !important;";
+    }
+
+    let alignOverride = "";
+    if (style.contentAlignment === "center") {
+      alignOverride = "text-align: center;";
+    }
+
+    let cardOverrides = "";
+    if (style.cardRadius === "sharp") {
+      cardOverrides += "border-radius: 4px !important;";
+    } else if (style.cardRadius === "pill") {
+      cardOverrides += "border-radius: 2rem !important;";
+    } else if (style.cardRadius === "smooth") {
+      cardOverrides += "border-radius: 1.25rem !important;";
+    }
+
+    if (style.cardBorder === "none") {
+      cardOverrides += "border: none !important;";
+    } else if (style.cardBorder === "accent") {
+      cardOverrides += "border: 2px solid var(--primary) !important;";
+    } else if (style.cardBorder === "hairline") {
+      cardOverrides += "border: 1px solid var(--border-light) !important;";
+    }
+
+    if (style.cardElevation === "none") {
+      cardOverrides += "box-shadow: none !important;";
+    } else if (style.cardElevation === "elevated") {
+      cardOverrides += "box-shadow: 0 16px 36px -4px rgba(0,0,0,0.1), 0 6px 16px -2px rgba(0,0,0,0.05) !important;";
+    } else if (style.cardElevation === "subtle") {
+      cardOverrides += "box-shadow: 0 4px 16px rgba(0,0,0,0.05) !important;";
+    }
+
+    if (paddingOverride || surfaceOverride) {
+      if (modified.includes('style="')) {
+        modified = modified.replace(/style="([^"]*)"/, `style="$1 ${paddingOverride} ${surfaceOverride}"`);
+      } else {
+        modified = modified.replace(/<section\s+([^>]*?)>/, `<section $1 style="${paddingOverride} ${surfaceOverride}">`);
+      }
+    }
+
+    if (containerOverride) {
+      modified = modified.replace(/class="container"/g, `class="container" style="${containerOverride}"`);
+    }
+
+    if (alignOverride) {
+      modified = modified.replace(/class="section-title"/g, `class="section-title" style="${alignOverride}"`);
+      modified = modified.replace(/class="section-desc"/g, `class="section-desc" style="margin-left: auto; margin-right: auto; ${alignOverride}"`);
+      modified = modified.replace(/class="section-eyebrow"/g, `class="section-eyebrow" style="${alignOverride}"`);
+    }
+
+    if (cardOverrides) {
+      modified = modified.replace(/class="card"/g, `class="card" style="${cardOverrides}"`);
+    }
+
+    return modified;
+  }
 
   // Render all active body sections in their exact user-specified order
   const bodyContent = activeSections
     .filter((sec) => sec.type !== "navbar" && sec.type !== "footer")
     .map((sec) => {
       const fn = sectionRenderers[sec.type];
-      return fn ? fn(sec.data) : "";
+      const rawHtml = fn ? fn(sec.data, sec.style?.layoutPreset) : "";
+      return applySectionStyles(rawHtml, sec.style, sec);
     })
     .join("\n");
 
@@ -750,17 +1172,95 @@ export function compileLandingPageToHtml(
     .section-title { font-family: var(--font-serif); font-size: 2.85rem; line-height: 1.12; margin-top: 0.5rem; color: var(--text-dark); }
     .section-desc { color: var(--text-muted); max-width: 650px; margin-top: 0.75rem; font-size: 1.05rem; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; }
 
-    /* Desktop Grids (Defensive Auto-Fit Layouts) */
+    /* Desktop Grids & Layout Presets */
     .grid-hero { display: grid; grid-template-columns: 1.3fr 0.9fr; gap: 3.5rem; align-items: start; }
+    .hero-centered-layout { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 900px; margin: 0 auto; }
+    .hero-minimal-layout { max-width: 820px; margin: 0 auto; text-align: center; }
+
     .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1.5rem; }
+    .stats-inline-bar { display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap: 2rem; border-radius: 1.25rem; background: var(--bg-light); border: 1px solid var(--border-light); padding: 1.75rem 2.5rem; }
+    .stats-inline-item { display: flex; align-items: center; gap: 1rem; text-align: left; }
+
     .grid-whyus { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; }
+    .whyus-split-container { display: grid; grid-template-columns: 1fr 1.25fr; gap: 3.5rem; align-items: center; }
+    .whyus-stacked-list { display: flex; flex-direction: column; gap: 1.25rem; }
+
     .grid-services { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.75rem; }
+    .grid-services-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1.25rem; }
+    .grid-services-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 2rem; }
+    .services-carousel-track { display: flex; gap: 1.5rem; overflow-x: auto; padding-bottom: 1.25rem; scrollbar-width: thin; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+    .services-carousel-track > .card { flex: 0 0 min(340px, 85vw); scroll-snap-align: start; }
+
     .grid-doctors { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 2rem; }
+    .grid-doctors-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1.25rem; }
+    .grid-doctors-list { display: flex; flex-direction: column; gap: 1.5rem; max-width: 960px; margin: 0 auto; }
+    .card-doctor-horizontal { display: flex; flex-direction: row; align-items: center; text-align: left; gap: 2rem; padding: 1.75rem 2rem; }
+
     .grid-reviews { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 2rem; }
+    .grid-reviews-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 2rem; }
+    .review-featured-card { max-width: 840px; margin: 0 auto 2rem auto; text-align: center; padding: 3rem 2.5rem; background: linear-gradient(180deg, #ffffff 0%, var(--bg-light) 100%); }
+    .review-featured-quote { font-size: 1.4rem; line-height: 1.6; font-family: var(--font-serif); color: var(--text-dark); margin: 1.25rem 0; }
+
     .grid-hours { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3rem; align-items: start; }
+    .hours-centered-layout { max-width: 720px; margin: 0 auto; text-align: center; }
+
     .grid-booking { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
     .grid-booking-nomap { display: grid; grid-template-columns: 1fr; max-width: 750px; margin: 0 auto; gap: 2rem; align-items: start; }
     .grid-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 3rem; margin-bottom: 3rem; }
+    .footer-minimal-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; padding: 1.5rem 0; }
+
+    /* Empty Slot Auto-Collapse */
+    .slot-container:empty { display: none !important; }
+
+    /* Cards & Defensive UI Primitives */
+    .card { background-color: #ffffff; border: 1px solid var(--border-light); border-radius: 1.25rem; padding: 2rem; min-width: 0; word-break: break-word; overflow-wrap: break-word; }
+    .card-doctor-avatar { width: 80px; height: 80px; aspect-ratio: 1/1; border-radius: 50%; background-color: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-family: var(--font-serif); margin: 0 auto 1.25rem auto; flex-shrink: 0; object-fit: cover; }
+    .icon-box { width: 44px; height: 44px; aspect-ratio: 1/1; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background-color: var(--bg-light); border: 1px solid var(--border-light); color: var(--primary); flex-shrink: 0; }
+
+    .mobile-menu-btn { display: none; }
+
+    /* Tablet (768px - 1023px) */
+    @media (max-width: 1023px) {
+      .grid-hero { grid-template-columns: 1fr; gap: 2.5rem; }
+      .whyus-split-container { grid-template-columns: 1fr; gap: 2.5rem; }
+      .grid-hours { grid-template-columns: 1fr; gap: 2rem; }
+      .grid-booking { grid-template-columns: 1fr; gap: 2rem; }
+      .section-title { font-size: 2.4rem; }
+    }
+
+    /* Mobile (< 768px) */
+    @media (max-width: 767px) {
+      .desktop-nav { display: none !important; }
+      .navbar-inner { padding: 0.65rem 0; }
+      .navbar-brand { max-width: calc(100% - 46px); }
+      .brand-logo { width: 32px; height: 32px; font-size: 1rem; border-radius: 8px; }
+      .brand-title { font-size: 0.98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+      .brand-tagline { font-size: 0.62rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+      .mobile-menu-btn { display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-dark); width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
+      .mobile-menu-btn:hover { background-color: rgba(0,0,0,0.05); }
+
+      .topbar { padding: 0.35rem 0; font-size: 0.7rem; }
+      .topbar .container { flex-direction: row; justify-content: space-between; align-items: center; }
+
+      section { padding: 3.5rem 0; }
+      .section-title { font-size: 2.1rem; }
+      
+      .grid-hero { grid-template-columns: 1fr; }
+      .whyus-split-container { grid-template-columns: 1fr; gap: 2rem; }
+      .grid-hours { grid-template-columns: 1fr; gap: 1.5rem; }
+      .grid-booking { grid-template-columns: 1fr; gap: 2rem; }
+
+      .btn { width: 100%; }
+      .hero-cta-group { flex-direction: column; width: 100%; }
+      .hero-cta-group .btn { width: 100%; }
+    }
+
+    @media (max-width: 640px) {
+      .card-doctor-horizontal { flex-direction: column; text-align: center; }
+      .card-doctor-horizontal .card-doctor-avatar { margin: 0 auto 1rem auto; }
+      .stats-inline-bar { flex-direction: column; gap: 1.5rem; align-items: center; }
+      .stats-inline-item { flex-direction: column; text-align: center; }
+    }
 
     /* Empty Slot Auto-Collapse */
     .slot-container:empty { display: none !important; }
@@ -809,6 +1309,115 @@ export function compileLandingPageToHtml(
     ${
       isEditable
         ? `
+      /* Studio Section Interactive Canvas Elements */
+      .studio-section {
+        position: relative !important;
+        transition: outline 0.12s ease;
+      }
+      .studio-section:hover {
+        outline: 1.5px solid #06b6d4 !important;
+        outline-offset: -1.5px;
+      }
+      .studio-section.studio-section-active {
+        outline: 2.5px solid var(--primary) !important;
+        outline-offset: -2.5px;
+        z-index: 30;
+      }
+
+      /* Corner Ticks (4 corner squares) */
+      .studio-tick {
+        position: fixed;
+        width: 7px;
+        height: 7px;
+        background: #ffffff;
+        border: 1.5px solid var(--primary);
+        z-index: 99998;
+        pointer-events: none;
+        box-sizing: border-box;
+      }
+
+      /* Hover Chip */
+      #studioHoverBadge {
+        position: fixed;
+        pointer-events: none;
+        z-index: 99999;
+        display: none;
+        background: rgba(15, 23, 42, 0.94);
+        color: #22d3ee;
+        border: 1px solid rgba(6, 182, 212, 0.4);
+        font-family: var(--font-mono), monospace;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 9px;
+        border-radius: 6px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        align-items: center;
+        gap: 6px;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+        backdrop-filter: blur(4px);
+      }
+
+      /* Floating Action Toolbar */
+      #studioFloatingBar {
+        position: fixed;
+        z-index: 100000;
+        display: none;
+        align-items: center;
+        gap: 4px;
+        background: rgba(15, 23, 42, 0.95);
+        color: #f8fafc;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        padding: 4px 6px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+        font-size: 11px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-weight: 500;
+        backdrop-filter: blur(8px);
+        user-select: none;
+      }
+      #studioFloatingBar .sec-title-tag {
+        color: #38bdf8;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0 6px 0 2px;
+        border-right: 1px solid rgba(255,255,255,0.18);
+      }
+      #studioFloatingBar button {
+        background: rgba(255, 255, 255, 0.08);
+        border: none;
+        color: #f8fafc;
+        border-radius: 4px;
+        padding: 3px 6px;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        transition: background-color 0.1s ease, color 0.1s ease;
+      }
+      #studioFloatingBar button:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      #studioFloatingBar button.btn-hide {
+        color: #fca5a5;
+      }
+      #studioFloatingBar button.btn-hide:hover {
+        background: rgba(239, 68, 68, 0.25);
+        color: #fecaca;
+      }
+      #studioFloatingBar button.btn-inspect {
+        background: var(--primary);
+        color: #ffffff;
+      }
+      #studioFloatingBar button.btn-inspect:hover {
+        background: var(--primary-hover, #0284c7);
+      }
+
       /* Studio Editor Clean Natural Box (Zero Internal Scrollbars) */
       [contenteditable="true"] {
         display: inline-block;
@@ -877,7 +1486,7 @@ export function compileLandingPageToHtml(
   }
 
   <!-- NAVBAR -->
-  <header class="navbar">
+  <header class="navbar studio-section" data-section-id="${navbarBlock.id}" data-section-type="navbar" data-section-name="Navigation Bar">
     <div class="container">
       <div class="navbar-inner">
         <!-- Clinic Brand: Non-navigating element -->
@@ -916,9 +1525,13 @@ export function compileLandingPageToHtml(
 
         <!-- Desktop Nav -->
         <nav class="desktop-nav" style="display: flex; align-items: center; gap: 1.75rem;">
-          ${(navbar.links || [])
-            .map((link) => `<a href="${link.href}" class="nav-link" style="white-space: nowrap;">${escapeHtml(link.label)}</a>`)
-            .join("")}
+          ${
+            navbarBlock.style?.layoutPreset === "minimal"
+              ? ""
+              : (navbar.links || [])
+                  .map((link) => `<a href="${link.href}" class="nav-link" style="white-space: nowrap;">${escapeHtml(link.label)}</a>`)
+                  .join("")
+          }
           <a href="${navbarBtn.href}" ${navbarBtn.targetAttr} data-btn-id="navbar.cta" class="btn ${navbarBtn.variantClass}" style="white-space: nowrap;" ${editAttr} data-field="navbar.ctaText">${escapeHtml(navbarBtn.label)}</a>
         </nav>
 
@@ -946,7 +1559,7 @@ export function compileLandingPageToHtml(
   ${bodyContent}
 
   <!-- FOOTER -->
-  ${footerBlock ? renderFooter(footer, editAttr, safeSite.name) : ""}
+  ${footerBlock ? renderFooter(footer, editAttr, safeSite.name, footerBlock.id) : ""}
 
   <script>
     // Always start at top of page on render
@@ -1020,16 +1633,178 @@ export function compileLandingPageToHtml(
     ${
       isEditable
         ? `
+    // Studio Canvas Hover & Selection Controller
+    var activeSectionEl = null;
+    var hoverBadge = document.getElementById('studioHoverBadge');
+    var hoverText = document.getElementById('studioHoverText');
+    var tickTL = document.getElementById('studioTickTL');
+    var tickTR = document.getElementById('studioTickTR');
+    var tickBL = document.getElementById('studioTickBL');
+    var tickBR = document.getElementById('studioTickBR');
+    var floatingBar = document.getElementById('studioFloatingBar');
+    var activeTitle = document.getElementById('studioActiveTitle');
+
+    function updateActiveOverlay() {
+      if (!activeSectionEl || !activeSectionEl.isConnected) {
+        if (tickTL) tickTL.style.display = 'none';
+        if (tickTR) tickTR.style.display = 'none';
+        if (tickBL) tickBL.style.display = 'none';
+        if (tickBR) tickBR.style.display = 'none';
+        if (floatingBar) floatingBar.style.display = 'none';
+        return;
+      }
+
+      var rect = activeSectionEl.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.innerHeight) {
+        if (tickTL) tickTL.style.display = 'none';
+        if (tickTR) tickTR.style.display = 'none';
+        if (tickBL) tickBL.style.display = 'none';
+        if (tickBR) tickBR.style.display = 'none';
+        if (floatingBar) floatingBar.style.display = 'none';
+        return;
+      }
+
+      var secName = activeSectionEl.getAttribute('data-section-name') || 'Section';
+      if (activeTitle) activeTitle.innerText = secName;
+
+      // Position 4 corner ticks
+      if (tickTL) {
+        tickTL.style.top = (rect.top - 3) + 'px';
+        tickTL.style.left = (rect.left - 3) + 'px';
+        tickTL.style.display = 'block';
+      }
+      if (tickTR) {
+        tickTR.style.top = (rect.top - 3) + 'px';
+        tickTR.style.left = (rect.right - 4) + 'px';
+        tickTR.style.display = 'block';
+      }
+      if (tickBL) {
+        tickBL.style.top = (rect.bottom - 4) + 'px';
+        tickBL.style.left = (rect.left - 3) + 'px';
+        tickBL.style.display = 'block';
+      }
+      if (tickBR) {
+        tickBR.style.top = (rect.bottom - 4) + 'px';
+        tickBR.style.left = (rect.right - 4) + 'px';
+        tickBR.style.display = 'block';
+      }
+
+      // Position floating quick-action toolbar at top right
+      if (floatingBar) {
+        var barTop = Math.max(8, rect.top + 8);
+        var barRight = Math.max(12, (window.innerWidth - rect.right) + 12);
+        floatingBar.style.top = barTop + 'px';
+        floatingBar.style.right = barRight + 'px';
+        floatingBar.style.display = 'flex';
+      }
+    }
+
+    function setActiveSection(el, notifyParent) {
+      if (activeSectionEl) {
+        activeSectionEl.classList.remove('studio-section-active');
+      }
+      activeSectionEl = el;
+      if (activeSectionEl) {
+        activeSectionEl.classList.add('studio-section-active');
+        updateActiveOverlay();
+        if (notifyParent) {
+          var secId = activeSectionEl.getAttribute('data-section-id') || activeSectionEl.id || '';
+          var secType = activeSectionEl.getAttribute('data-section-type') || '';
+          window.parent.postMessage({
+            type: 'CANVAS_SECTION_SELECT',
+            sectionId: secId,
+            sectionType: secType
+          }, '*');
+        }
+      } else {
+        updateActiveOverlay();
+      }
+    }
+
+    // Scroll & Resize sync for active overlay
+    window.addEventListener('scroll', function() {
+      requestAnimationFrame(updateActiveOverlay);
+    }, { passive: true });
+    window.addEventListener('resize', function() {
+      requestAnimationFrame(updateActiveOverlay);
+    }, { passive: true });
+
+    // Hover Chip tracking
+    document.addEventListener('mouseover', function(e) {
+      var sec = e.target && (e.target.classList && e.target.classList.contains('studio-section') ? e.target : e.target.closest && e.target.closest('.studio-section'));
+      if (sec && sec !== activeSectionEl && hoverBadge && hoverText) {
+        var rect = sec.getBoundingClientRect();
+        var name = sec.getAttribute('data-section-name') || 'Section';
+        hoverText.innerText = name + ' • ' + Math.round(rect.width) + ' × ' + Math.round(rect.height) + 'px';
+        hoverBadge.style.top = Math.max(10, rect.top + 14) + 'px';
+        hoverBadge.style.left = Math.max(12, rect.left + 16) + 'px';
+        hoverBadge.style.display = 'flex';
+      } else if (hoverBadge) {
+        hoverBadge.style.display = 'none';
+      }
+    });
+
+    document.addEventListener('mouseout', function(e) {
+      if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.studio-section')) {
+        if (hoverBadge) hoverBadge.style.display = 'none';
+      }
+    });
+
+    // Handle floating toolbar button clicks
+    if (floatingBar) {
+      floatingBar.addEventListener('click', function(e) {
+        var btn = e.target.closest('button');
+        if (!btn || !activeSectionEl) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var action = btn.getAttribute('data-action');
+        var secId = activeSectionEl.getAttribute('data-section-id') || activeSectionEl.id || '';
+        var secType = activeSectionEl.getAttribute('data-section-type') || '';
+        window.parent.postMessage({
+          type: 'CANVAS_SECTION_ACTION',
+          action: action,
+          sectionId: secId,
+          sectionType: secType
+        }, '*');
+      });
+    }
+
+    // Click inside iframe to select section
+    document.addEventListener('click', function(e) {
+      if (floatingBar && floatingBar.contains(e.target)) return;
+
+      var sec = e.target && (e.target.classList && e.target.classList.contains('studio-section') ? e.target : e.target.closest && e.target.closest('.studio-section'));
+      if (sec) {
+        setActiveSection(sec, true);
+      }
+    }, false);
+
     // Support live DOM updates without full iframe reloads in studio mode
     window.addEventListener('message', function(e) {
       if (!e.data) return;
 
+      if (e.data.type === 'SET_ACTIVE_SECTION') {
+        var secId = e.data.sectionId;
+        if (!secId) {
+          setActiveSection(null, false);
+          return;
+        }
+        var targetEl = document.querySelector('[data-section-id="' + secId + '"]') ||
+                       document.querySelector('[data-section-type="' + secId + '"]') ||
+                       document.getElementById(secId) ||
+                       document.getElementById(secId.replace('sec-', ''));
+        if (targetEl) {
+          setActiveSection(targetEl, false);
+        }
+      }
+
       if (e.data.type === 'SCROLL_TO_SECTION') {
         var secId = e.data.sectionId;
         var targetId = secId.replace('sec-', '');
-        var el = document.getElementById(targetId) || document.getElementById(secId);
+        var el = document.getElementById(targetId) || document.getElementById(secId) || document.querySelector('[data-section-id="' + secId + '"]');
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setActiveSection(el, false);
         }
       }
 
@@ -1067,6 +1842,173 @@ export function compileLandingPageToHtml(
               btn.removeAttribute('rel');
             }
           }
+        }
+      }
+
+      if (e.data.type === 'HOT_UPDATE_THEME') {
+        var t = e.data.theme;
+        if (t) {
+          var root = document.documentElement;
+          if (t.primary) root.style.setProperty('--primary', t.primary);
+          if (t.primaryHover) root.style.setProperty('--primary-hover', t.primaryHover);
+          if (t.accent) root.style.setProperty('--accent', t.accent);
+          if (t.bgLight) root.style.setProperty('--bg-light', t.bgLight);
+          if (t.bgDark) root.style.setProperty('--bg-dark', t.bgDark);
+          if (t.borderLight) root.style.setProperty('--border-light', t.borderLight);
+          if (t.textDark) root.style.setProperty('--text-dark', t.textDark);
+          if (t.textMuted) root.style.setProperty('--text-muted', t.textMuted);
+        }
+      }
+
+      if (e.data.type === 'HOT_UPDATE_SECTION_STYLE') {
+        var sId = e.data.sectionId;
+        var sType = e.data.sectionType;
+        var style = e.data.style || {};
+        var secEl = document.querySelector('[data-section-id="' + sId + '"]') ||
+                    document.querySelector('[data-section-type="' + sType + '"]') ||
+                    document.getElementById(sType) ||
+                    document.getElementById(sType.replace('_', '-'));
+        if (secEl) {
+          // 1. Padding
+          var pad = style.verticalPadding;
+          if (pad === 'compact') secEl.style.setProperty('padding', '3rem 0', 'important');
+          else if (pad === 'spacious') secEl.style.setProperty('padding', '7.5rem 0', 'important');
+          else if (pad === 'balanced') secEl.style.setProperty('padding', '5rem 0', 'important');
+
+          // 2. Surface
+          var surface = style.surfaceStyle;
+          if (surface === 'card') {
+            secEl.style.setProperty('background', '#ffffff', 'important');
+            secEl.style.setProperty('border-top', '1px solid var(--border-light)', 'important');
+            secEl.style.setProperty('border-bottom', '1px solid var(--border-light)', 'important');
+            secEl.style.removeProperty('color');
+            secEl.querySelectorAll('.section-title').forEach(function(t) { t.style.removeProperty('color'); });
+            secEl.querySelectorAll('.section-desc').forEach(function(d) { d.style.removeProperty('color'); });
+          } else if (surface === 'tint') {
+            secEl.style.setProperty('background', 'color-mix(in srgb, var(--primary) 5%, var(--bg-light))', 'important');
+            secEl.style.setProperty('border-top', '1px solid var(--border-light)', 'important');
+            secEl.style.setProperty('border-bottom', '1px solid var(--border-light)', 'important');
+            secEl.style.removeProperty('color');
+            secEl.querySelectorAll('.section-title').forEach(function(t) { t.style.removeProperty('color'); });
+            secEl.querySelectorAll('.section-desc').forEach(function(d) { d.style.removeProperty('color'); });
+          } else if (surface === 'contrast') {
+            secEl.style.setProperty('background', 'var(--bg-dark)', 'important');
+            secEl.style.setProperty('color', '#f8fafc', 'important');
+            secEl.style.removeProperty('border-top');
+            secEl.style.removeProperty('border-bottom');
+            secEl.querySelectorAll('.section-title').forEach(function(t) { t.style.setProperty('color', '#ffffff', 'important'); });
+            secEl.querySelectorAll('.section-desc').forEach(function(d) { d.style.setProperty('color', '#94a3b8', 'important'); });
+          } else if (surface === 'default') {
+            secEl.style.removeProperty('background');
+            secEl.style.removeProperty('border-top');
+            secEl.style.removeProperty('border-bottom');
+            secEl.style.removeProperty('color');
+            secEl.querySelectorAll('.section-title').forEach(function(t) { t.style.removeProperty('color'); });
+            secEl.querySelectorAll('.section-desc').forEach(function(d) { d.style.removeProperty('color'); });
+          }
+
+          // 3. Container width
+          var cont = secEl.querySelector('.container');
+          if (cont) {
+            var width = style.containerWidth;
+            if (width === 'narrow') {
+              cont.style.setProperty('max-width', '960px', 'important');
+              cont.style.removeProperty('padding');
+            } else if (width === 'wide') {
+              cont.style.setProperty('max-width', '1440px', 'important');
+              cont.style.removeProperty('padding');
+            } else if (width === 'full') {
+              cont.style.setProperty('max-width', '100%', 'important');
+              cont.style.setProperty('padding', '0 2rem', 'important');
+            } else if (width === 'standard' || width === 'default') {
+              cont.style.setProperty('max-width', '1200px', 'important');
+              cont.style.removeProperty('padding');
+            }
+          }
+
+          // 4. Alignment
+          var align = style.contentAlignment;
+          if (align) {
+            var titles = secEl.querySelectorAll('.section-title, .section-desc, .section-eyebrow');
+            titles.forEach(function(t) {
+              if (align === 'center') {
+                t.style.textAlign = 'center';
+                if (t.classList.contains('section-desc')) {
+                  t.style.marginLeft = 'auto';
+                  t.style.marginRight = 'auto';
+                }
+              } else {
+                t.style.textAlign = 'left';
+                if (t.classList.contains('section-desc')) {
+                  t.style.marginLeft = '0';
+                  t.style.marginRight = '0';
+                }
+              }
+            });
+          }
+
+          // 5. Cards (Radius, Border, Elevation)
+          var cards = secEl.querySelectorAll('.card');
+          cards.forEach(function(c) {
+            var rad = style.cardRadius;
+            if (rad === 'sharp') c.style.setProperty('border-radius', '4px', 'important');
+            else if (rad === 'pill') c.style.setProperty('border-radius', '2rem', 'important');
+            else if (rad === 'smooth' || rad === 'rounded') c.style.setProperty('border-radius', '1.25rem', 'important');
+
+            var brd = style.cardBorder;
+            if (brd === 'none') c.style.setProperty('border', 'none', 'important');
+            else if (brd === 'accent') c.style.setProperty('border', '2px solid var(--primary)', 'important');
+            else if (brd === 'hairline' || brd === 'subtle') c.style.setProperty('border', '1px solid var(--border-light)', 'important');
+
+            var elev = style.cardElevation;
+            if (elev === 'none') c.style.setProperty('box-shadow', 'none', 'important');
+            else if (elev === 'subtle') c.style.setProperty('box-shadow', '0 4px 16px rgba(0,0,0,0.05)', 'important');
+            else if (elev === 'elevated') c.style.setProperty('box-shadow', '0 16px 36px -4px rgba(0,0,0,0.1), 0 6px 16px -2px rgba(0,0,0,0.05)', 'important');
+          });
+
+          // Refresh active ticks/toolbar position
+          updateActiveOverlay();
+        }
+      }
+
+      if (e.data.type === 'HOT_UPDATE_FIELD') {
+        var fld = e.data.field;
+        var val = e.data.value;
+        var el = document.querySelector('[data-field="' + fld + '"]') ||
+                 document.querySelector('[data-field="' + fld.replace('why_us', 'whyUs') + '"]') ||
+                 document.querySelector('[data-field="' + fld.replace('whyUs', 'why_us') + '"]');
+        if (el && document.activeElement !== el && el.innerText !== val) {
+          el.innerText = val;
+          updateActiveOverlay();
+        }
+      }
+
+      if (e.data.type === 'HOT_UPDATE_FIELDS') {
+        var flds = e.data.fields || {};
+        Object.keys(flds).forEach(function(k) {
+          var el2 = document.querySelector('[data-field="' + k + '"]') ||
+                    document.querySelector('[data-field="' + k.replace('why_us', 'whyUs') + '"]') ||
+                    document.querySelector('[data-field="' + k.replace('whyUs', 'why_us') + '"]');
+          if (el2 && document.activeElement !== el2 && el2.innerText !== flds[k]) {
+            el2.innerText = flds[k];
+          }
+        });
+        updateActiveOverlay();
+      }
+
+      if (e.data.type === 'HOT_UPDATE_IMAGE') {
+        var tgt = e.data.target;
+        var url = e.data.url;
+        if (tgt === 'hero' || tgt === 'hero.imageUrl') {
+          var hImg = document.querySelector('#hero img');
+          if (hImg && url) hImg.src = url;
+        } else if (tgt === 'logo' || tgt === 'navbar.logoUrl') {
+          var lImg = document.querySelector('.navbar-brand img');
+          if (lImg && url) lImg.src = url;
+        } else if (tgt && tgt.startsWith('doctor.')) {
+          var docId = tgt.replace('doctor.', '');
+          var dImg = document.querySelector('[data-doctor-id="' + docId + '"] img');
+          if (dImg && url) dImg.src = url;
         }
       }
     });
@@ -1419,6 +2361,33 @@ export function compileLandingPageToHtml(
     `
     }
   </script>
+
+  ${
+    isEditable
+      ? `
+  <!-- Studio Hover Chip -->
+  <div id="studioHoverBadge">
+    <span id="studioHoverText">Section • 1280 × 600px</span>
+  </div>
+
+  <!-- Studio Active Corner Ticks -->
+  <div id="studioTickTL" class="studio-tick" style="display: none;"></div>
+  <div id="studioTickTR" class="studio-tick" style="display: none;"></div>
+  <div id="studioTickBL" class="studio-tick" style="display: none;"></div>
+  <div id="studioTickBR" class="studio-tick" style="display: none;"></div>
+
+  <!-- Studio Floating Quick-Action Bar -->
+  <div id="studioFloatingBar">
+    <span id="studioActiveTitle" class="sec-title-tag">Hero</span>
+    <button type="button" data-action="move_up" title="Move Up">↑ Up</button>
+    <button type="button" data-action="move_down" title="Move Down">↓ Down</button>
+    <button type="button" data-action="duplicate" title="Duplicate Section">📋 Duplicate</button>
+    <button type="button" data-action="hide" title="Hide Section" class="btn-hide">👁 Hide</button>
+    <button type="button" data-action="inspect" title="Customize in Panel" class="btn-inspect">⚙ Inspect</button>
+  </div>
+`
+      : ""
+  }
 
 </body>
 </html>`;

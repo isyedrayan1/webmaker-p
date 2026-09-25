@@ -828,7 +828,7 @@ export function SectionInspector({
         <div className="flex items-center gap-2 mb-1">
           <Layers size={14} className="text-[hsl(var(--primary))]" />
           <h4 className="text-xs font-semibold text-[hsl(var(--foreground))] uppercase tracking-wider font-mono-app">
-            {section.type.toUpperCase()} Inspector
+            {String(section.type).toUpperCase()} Inspector
           </h4>
         </div>
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
