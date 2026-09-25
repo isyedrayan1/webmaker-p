@@ -9,6 +9,8 @@ import {
 import { compileLandingPageToHtml, resolveButtonProps } from "@/lib/static-compiler";
 import { Laptop, Tablet, Smartphone } from "lucide-react";
 import { toast } from "sonner";
+import { CanvasRulers } from "./CanvasRulers";
+import { CanvasViewportDock } from "./CanvasViewportDock";
 
 export type BuilderMode = "edit" | "preview";
 export type PreviewDevice = "desktop" | "tablet" | "mobile";
@@ -101,6 +103,64 @@ export function BuilderCanvas({
 
   const activeConfig = DEVICE_CONFIGS[previewDevice];
   const [scale, setScale] = useState<number>(1);
+  const [zoom, setZoom] = useState<number>(1);
+  const [showRulers, setShowRulers] = useState<boolean>(true);
+  const [showGuides, setShowGuides] = useState<boolean>(true);
+  const [containerSize, setContainerSize] = useState({ width: 1280, height: 850 });
+
+  // Monitor container bounding box for rulers & fit calculations
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
+    };
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const artboardWidth = 1280;
+  const artboardScaledWidth = artboardWidth * zoom;
+  const artboardLeft = Math.max(showRulers ? 20 : 0, (containerSize.width - artboardScaledWidth) / 2);
+  const artboardTop = showRulers ? 20 : 0;
+
+  const handleFitToScreen = () => {
+    const availableW = Math.max(300, containerSize.width - (showRulers ? 64 : 32));
+    const bestScale = Math.min(1.2, Math.max(0.5, availableW / 1280));
+    setZoom(Number(bestScale.toFixed(2)));
+    toast.info(`Fitted artboard (${Math.round(bestScale * 100)}%)`, { duration: 1200 });
+  };
+
+  const handleResetZoom = () => {
+    setZoom(1);
+    toast.info("Zoom reset to 100%", { duration: 1000 });
+  };
+
+  // Keyboard Shortcuts for Canvas Zoom (Ctrl/Cmd +, -, 0)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "=" || e.key === "+")) {
+        e.preventDefault();
+        setZoom((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))));
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "-") {
+        e.preventDefault();
+        setZoom((z) => Math.max(0.5, Number((z - 0.1).toFixed(2))));
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "0") {
+        e.preventDefault();
+        setZoom(1);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Proportional 2D Auto-Scaler for simulator
   useEffect(() => {
@@ -388,30 +448,79 @@ export function BuilderCanvas({
     return () => window.removeEventListener("message", handleMessage);
   }, [site, onChange, onUndo, onTypingActive, onSelectSection, onSectionAction]);
 
-  // 1. EDIT MODE: 100% Full-Bleed Fluid Canvas (Stable Iframe Key: Zero Reloads!)
+  // 1. EDIT MODE: Figma-Style Visual Artboard with Zoom, Rulers & Guidelines
   if (mode === "edit") {
     return (
-      <div className="w-full h-full min-h-[calc(100vh-64px)] bg-white flex-1 relative overflow-hidden">
-        <iframe
-          key={`${site.id}-edit`}
-          ref={iframeRef}
-          srcDoc={compiledHtml}
-          onLoad={() => {
-            try {
-              if (selectedSectionId) {
-                iframeRef.current?.contentWindow?.postMessage(
-                  {
-                    type: "SET_ACTIVE_SECTION",
-                    sectionId: selectedSectionId,
-                  },
-                  "*"
-                );
-              }
-            } catch {}
+      <div
+        ref={containerRef}
+        className="w-full h-full min-h-[calc(100vh-64px)] relative overflow-hidden flex flex-col bg-[#f8fafc] dark:bg-[#080c14] bg-[radial-gradient(#cbd5e1_1.2px,transparent_1.2px)] dark:bg-[radial-gradient(#1e293b_1.2px,transparent_1.2px)] [background-size:20px_20px]"
+      >
+        {/* Visual Pixel Rulers & Container Breakpoint Guides */}
+        {showRulers && (
+          <CanvasRulers
+            zoom={zoom}
+            containerWidth={containerSize.width}
+            containerHeight={containerSize.height}
+            artboardWidth={artboardWidth}
+            artboardLeft={artboardLeft}
+            artboardTop={artboardTop}
+            showGuides={showGuides}
+          />
+        )}
+
+        {/* Scrollable / Scaled Artboard Viewport Container */}
+        <div
+          className="flex-1 w-full h-full overflow-y-auto overflow-x-auto relative flex justify-center"
+          style={{
+            paddingTop: `${artboardTop + 12}px`,
+            paddingBottom: "80px", // space for bottom dock
           }}
-          title="Live Studio Builder Canvas"
-          className="w-full h-full min-h-[calc(100vh-64px)] border-none bg-white"
-          sandbox="allow-scripts allow-forms allow-modals"
+        >
+          {/* Canonical 1280px Desktop Artboard Frame */}
+          <div
+            className="shrink-0 bg-white shadow-2xl rounded-sm border border-[hsl(var(--border)/.6)] overflow-hidden transition-all duration-100 ease-out origin-top"
+            style={{
+              width: `${artboardWidth}px`,
+              minHeight: "100%",
+              transform: `scale(${zoom})`,
+              marginBottom: "40px",
+            }}
+          >
+            <iframe
+              key={`${site.id}-edit`}
+              ref={iframeRef}
+              srcDoc={compiledHtml}
+              onLoad={() => {
+                try {
+                  if (selectedSectionId) {
+                    iframeRef.current?.contentWindow?.postMessage(
+                      {
+                        type: "SET_ACTIVE_SECTION",
+                        sectionId: selectedSectionId,
+                      },
+                      "*"
+                    );
+                  }
+                } catch {}
+              }}
+              title="Live Studio Builder Canvas"
+              className="w-full h-full min-h-[calc(100vh-120px)] border-none bg-white block"
+              sandbox="allow-scripts allow-forms allow-modals"
+            />
+          </div>
+        </div>
+
+        {/* Floating Viewport Dock (Zoom, Rulers, Guides, Reset) */}
+        <CanvasViewportDock
+          zoom={zoom}
+          onZoomChange={(newZ) => setZoom(newZ)}
+          onFitToScreen={handleFitToScreen}
+          onResetZoom={handleResetZoom}
+          showRulers={showRulers}
+          onToggleRulers={() => setShowRulers(!showRulers)}
+          showGuides={showGuides}
+          onToggleGuides={() => setShowGuides(!showGuides)}
+          artboardWidth={artboardWidth}
         />
       </div>
     );

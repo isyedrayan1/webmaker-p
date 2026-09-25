@@ -1377,12 +1377,24 @@ export function compileLandingPageToHtml(
         backdrop-filter: blur(8px);
         user-select: none;
       }
+      #studioFloatingBar .sec-grip-icon {
+        color: #64748b;
+        font-size: 13px;
+        padding: 0 3px 0 1px;
+        cursor: grab;
+      }
       #studioFloatingBar .sec-title-tag {
         color: #38bdf8;
         font-size: 10.5px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        padding: 0 4px 0 2px;
+      }
+      #studioFloatingBar .sec-dims-tag {
+        color: #94a3b8;
+        font-size: 9.5px;
+        font-family: monospace;
         padding: 0 6px 0 2px;
         border-right: 1px solid rgba(255,255,255,0.18);
       }
@@ -1416,6 +1428,50 @@ export function compileLandingPageToHtml(
       }
       #studioFloatingBar button.btn-inspect:hover {
         background: var(--primary-hover, #0284c7);
+      }
+
+      /* Visual Spatial Padding Indicators */
+      #studioPaddingTop, #studioPaddingBottom {
+        position: fixed;
+        z-index: 99990;
+        display: none;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          -45deg,
+          rgba(14, 165, 233, 0.07),
+          rgba(14, 165, 233, 0.07) 8px,
+          rgba(14, 165, 233, 0.14) 8px,
+          rgba(14, 165, 233, 0.14) 16px
+        );
+        border-left: 2px dashed rgba(14, 165, 233, 0.4);
+        border-right: 2px dashed rgba(14, 165, 233, 0.4);
+        box-sizing: border-box;
+      }
+      #studioPaddingTop {
+        border-top: 1px dashed rgba(14, 165, 233, 0.5);
+        border-bottom: 1px dashed rgba(14, 165, 233, 0.4);
+      }
+      #studioPaddingBottom {
+        border-top: 1px dashed rgba(14, 165, 233, 0.4);
+        border-bottom: 1px dashed rgba(14, 165, 233, 0.5);
+      }
+      .studio-pad-badge {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(15, 23, 42, 0.85);
+        color: #38bdf8;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 4px;
+        letter-spacing: 0.03em;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        white-space: nowrap;
+        user-select: none;
       }
 
       /* Studio Editor Clean Natural Box (Zero Internal Scrollbars) */
@@ -1643,6 +1699,11 @@ export function compileLandingPageToHtml(
     var tickBR = document.getElementById('studioTickBR');
     var floatingBar = document.getElementById('studioFloatingBar');
     var activeTitle = document.getElementById('studioActiveTitle');
+    var activeDims = document.getElementById('studioActiveDims');
+    var padTopEl = document.getElementById('studioPaddingTop');
+    var padTopText = document.getElementById('studioPaddingTopText');
+    var padBottomEl = document.getElementById('studioPaddingBottom');
+    var padBottomText = document.getElementById('studioPaddingBottomText');
 
     function updateActiveOverlay() {
       if (!activeSectionEl || !activeSectionEl.isConnected) {
@@ -1651,6 +1712,8 @@ export function compileLandingPageToHtml(
         if (tickBL) tickBL.style.display = 'none';
         if (tickBR) tickBR.style.display = 'none';
         if (floatingBar) floatingBar.style.display = 'none';
+        if (padTopEl) padTopEl.style.display = 'none';
+        if (padBottomEl) padBottomEl.style.display = 'none';
         return;
       }
 
@@ -1661,11 +1724,14 @@ export function compileLandingPageToHtml(
         if (tickBL) tickBL.style.display = 'none';
         if (tickBR) tickBR.style.display = 'none';
         if (floatingBar) floatingBar.style.display = 'none';
+        if (padTopEl) padTopEl.style.display = 'none';
+        if (padBottomEl) padBottomEl.style.display = 'none';
         return;
       }
 
       var secName = activeSectionEl.getAttribute('data-section-name') || 'Section';
       if (activeTitle) activeTitle.innerText = secName;
+      if (activeDims) activeDims.innerText = Math.round(rect.width) + ' × ' + Math.round(rect.height) + 'px';
 
       // Position 4 corner ticks
       if (tickTL) {
@@ -1696,6 +1762,33 @@ export function compileLandingPageToHtml(
         floatingBar.style.top = barTop + 'px';
         floatingBar.style.right = barRight + 'px';
         floatingBar.style.display = 'flex';
+      }
+
+      // Calculate and position visual spatial padding indicators
+      var cs = window.getComputedStyle(activeSectionEl);
+      var pt = parseFloat(cs.paddingTop) || 0;
+      var pb = parseFloat(cs.paddingBottom) || 0;
+
+      if (padTopEl && pt > 8) {
+        padTopEl.style.top = rect.top + 'px';
+        padTopEl.style.left = rect.left + 'px';
+        padTopEl.style.width = rect.width + 'px';
+        padTopEl.style.height = pt + 'px';
+        padTopEl.style.display = 'block';
+        if (padTopText) padTopText.innerText = 'Top: ' + Math.round(pt) + 'px';
+      } else if (padTopEl) {
+        padTopEl.style.display = 'none';
+      }
+
+      if (padBottomEl && pb > 8) {
+        padBottomEl.style.top = (rect.bottom - pb) + 'px';
+        padBottomEl.style.left = rect.left + 'px';
+        padBottomEl.style.width = rect.width + 'px';
+        padBottomEl.style.height = pb + 'px';
+        padBottomEl.style.display = 'block';
+        if (padBottomText) padBottomText.innerText = 'Bottom: ' + Math.round(pb) + 'px';
+      } else if (padBottomEl) {
+        padBottomEl.style.display = 'none';
       }
     }
 
@@ -2370,6 +2463,14 @@ export function compileLandingPageToHtml(
     <span id="studioHoverText">Section • 1280 × 600px</span>
   </div>
 
+  <!-- Studio Spatial Padding Visualizers -->
+  <div id="studioPaddingTop" style="display: none;">
+    <span id="studioPaddingTopText" class="studio-pad-badge">Top: 80px</span>
+  </div>
+  <div id="studioPaddingBottom" style="display: none;">
+    <span id="studioPaddingBottomText" class="studio-pad-badge">Bottom: 80px</span>
+  </div>
+
   <!-- Studio Active Corner Ticks -->
   <div id="studioTickTL" class="studio-tick" style="display: none;"></div>
   <div id="studioTickTR" class="studio-tick" style="display: none;"></div>
@@ -2378,7 +2479,9 @@ export function compileLandingPageToHtml(
 
   <!-- Studio Floating Quick-Action Bar -->
   <div id="studioFloatingBar">
+    <span class="sec-grip-icon" title="Active Section">⠿</span>
     <span id="studioActiveTitle" class="sec-title-tag">Hero</span>
+    <span id="studioActiveDims" class="sec-dims-tag">1280 × 640px</span>
     <button type="button" data-action="move_up" title="Move Up">↑ Up</button>
     <button type="button" data-action="move_down" title="Move Down">↓ Down</button>
     <button type="button" data-action="duplicate" title="Duplicate Section">📋 Duplicate</button>
