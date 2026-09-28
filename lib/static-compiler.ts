@@ -412,12 +412,25 @@ function renderWhyUs(whyUs: Partial<WhyUsSectionData>, editAttr: string, preset?
   </section>`;
 }
 
-function renderServices(services: Partial<ServicesSectionData>, editAttr: string, preset?: string): string {
+function renderServices(
+  services: Partial<ServicesSectionData>,
+  editAttr: string,
+  site?: LandingPageData | null,
+  preset?: string
+): string {
   const serviceList = services.services || [
     { id: "1", name: "Primary & Family Medicine", badge: "All Ages", description: "Routine physicals, vaccinations, and chronic care management.", highlights: ["Screenings", "Immunizations"] },
     { id: "2", name: "Cardiovascular Care", badge: "Specialized", description: "Cardiac diagnostics, echocardiograms, and hypertension management.", highlights: ["ECG", "Echocardiogram"] },
     { id: "3", name: "Orthopedics & Rehab", badge: "Rapid Recovery", description: "Joint preservation, fracture care, and physical rehabilitation.", highlights: ["Rehab", "Therapy"] },
   ];
+
+  const servicesBtn = resolveButtonProps(
+    "services.cta",
+    "Consult a Specialist",
+    "#booking",
+    "btn-primary",
+    site
+  );
 
   let gridClass = "grid-services";
   if (preset === "grid_4") gridClass = "grid-services-4";
@@ -460,16 +473,33 @@ function renderServices(services: Partial<ServicesSectionData>, editAttr: string
           )
           .join("")}
       </div>
+
+      <div style="text-align: center; margin-top: 3rem;">
+        <a href="${servicesBtn.href}" ${servicesBtn.targetAttr} data-btn-id="services.cta" class="btn ${servicesBtn.variantClass}" style="padding: 0.85rem 2.25rem; font-size: 0.95rem;">${escapeHtml(servicesBtn.label)}</a>
+      </div>
     </div>
   </section>`;
 }
 
-function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string, preset?: string): string {
+function renderDoctors(
+  doctors: Partial<DoctorsSectionData>,
+  editAttr: string,
+  site?: LandingPageData | null,
+  preset?: string
+): string {
   const doctorList = doctors.doctors || [
     { id: "1", name: "Dr. Eleanor Vance, MD", role: "Chief of Cardiology", credentials: "Harvard Medical · FACC", experience: "16+ Years Experience" },
     { id: "2", name: "Dr. Marcus Thorne, MD", role: "Lead Orthopedic Surgeon", credentials: "Johns Hopkins · FAAOS", experience: "14+ Years Experience" },
     { id: "3", name: "Dr. Maya Patel, MD", role: "Director of Pediatrics", credentials: "Stanford Medicine · FAAP", experience: "12+ Years Experience" },
   ];
+
+  const doctorsBtn = resolveButtonProps(
+    "doctors.cta",
+    "View All Specialists",
+    "#booking",
+    "btn-primary",
+    site
+  );
 
   if (preset === "list_detailed") {
     return `
@@ -503,6 +533,10 @@ function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string, p
         </div>`
           )
           .join("")}
+      </div>
+
+      <div style="text-align: center; margin-top: 3rem;">
+        <a href="${doctorsBtn.href}" ${doctorsBtn.targetAttr} data-btn-id="doctors.cta" class="btn ${doctorsBtn.variantClass}" style="padding: 0.85rem 2.25rem; font-size: 0.95rem;">${escapeHtml(doctorsBtn.label)}</a>
       </div>
     </div>
   </section>`;
@@ -541,6 +575,10 @@ function renderDoctors(doctors: Partial<DoctorsSectionData>, editAttr: string, p
         </div>`
           )
           .join("")}
+      </div>
+
+      <div style="text-align: center; margin-top: 3rem;">
+        <a href="${doctorsBtn.href}" ${doctorsBtn.targetAttr} data-btn-id="doctors.cta" class="btn ${doctorsBtn.variantClass}" style="padding: 0.85rem 2.25rem; font-size: 0.95rem;">${escapeHtml(doctorsBtn.label)}</a>
       </div>
     </div>
   </section>`;
@@ -836,20 +874,32 @@ function renderFooter(
   editAttr: string,
   defaultName: string,
   footerBlockId = "sec-footer",
-  preset?: string
+  preset?: string,
+  site?: LandingPageData | null
 ): string {
+  const portalBtn = resolveButtonProps(
+    "footer.portal",
+    "Patient Portal Login",
+    "https://myhealth-portal.org",
+    "btn-outline",
+    site
+  );
+
   if (preset === "minimal_bar") {
     return `
   <!-- FOOTER (COMPACT BAR) -->
   <footer id="footer" class="studio-section" data-section-id="${footerBlockId}" data-section-type="footer" data-section-name="Footer" style="background-color: var(--bg-dark); color: #ffffff; padding: 2.25rem 0; border-top: 1px solid rgba(255,255,255,0.1);">
     <div class="container">
-      <div class="footer-minimal-bar">
+      <div class="footer-minimal-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
           <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; white-space: nowrap;" ${editAttr} data-field="footer.hospitalName">${escapeHtml(footer.hospitalName || defaultName)}</h3>
           <span style="color: rgba(255,255,255,0.3);">·</span>
           <span style="font-size: 0.82rem; color: rgba(255,255,255,0.65);" ${editAttr} data-field="footer.copyrightText">${escapeHtml(footer.copyrightText || `© 2026 ${defaultName}. All rights reserved.`)}</span>
         </div>
-        ${footer.phone || editAttr ? `<div style="font-size: 0.85rem; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 0.4rem;">${ICONS.phone} <span ${editAttr} data-field="footer.phone">${escapeHtml(footer.phone || "+1 (206) 555-0198")}</span></div>` : ""}
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+          ${footer.phone || editAttr ? `<div style="font-size: 0.85rem; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 0.4rem;">${ICONS.phone} <span ${editAttr} data-field="footer.phone">${escapeHtml(footer.phone || "+1 (206) 555-0198")}</span></div>` : ""}
+          <a href="${portalBtn.href}" ${portalBtn.targetAttr} data-btn-id="footer.portal" class="btn ${portalBtn.variantClass}" style="padding: 0.45rem 1rem; font-size: 0.8rem; border-color: rgba(255,255,255,0.25) !important; color: #ffffff !important;">${escapeHtml(portalBtn.label)}</a>
+        </div>
       </div>
     </div>
   </footer>`;
@@ -874,8 +924,14 @@ function renderFooter(
               .map((link) => `<a href="${link.href}" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(link.label)}</a>`)
               .join("")}
           </div>
+          <div style="margin-top: 1.25rem;">
+            <a href="${portalBtn.href}" ${portalBtn.targetAttr} data-btn-id="footer.portal" class="btn ${portalBtn.variantClass}" style="padding: 0.45rem 1rem; font-size: 0.8rem; border-color: rgba(255,255,255,0.25) !important; color: #ffffff !important;">${escapeHtml(portalBtn.label)}</a>
+          </div>
         </div>`
-            : ""
+            : `<div style="min-width: 0;">
+          <h4 style="font-size: 0.9rem; font-family: var(--font-mono); text-transform: uppercase; margin-bottom: 1rem; color: rgba(255,255,255,0.5);">Patient Access</h4>
+          <a href="${portalBtn.href}" ${portalBtn.targetAttr} data-btn-id="footer.portal" class="btn ${portalBtn.variantClass}" style="padding: 0.45rem 1rem; font-size: 0.8rem; border-color: rgba(255,255,255,0.25) !important; color: #ffffff !important;">${escapeHtml(portalBtn.label)}</a>
+        </div>`
         }
         <div style="min-width: 0;">
           <h4 style="font-size: 0.9rem; font-family: var(--font-mono); text-transform: uppercase; margin-bottom: 1rem; color: rgba(255,255,255,0.5);">Direct Contact</h4>
@@ -932,8 +988,8 @@ export function compileLandingPageToHtml(
     hero: (data, preset) => renderHero((data || {}) as Partial<HeroSectionData>, editAttr, safeSite, preset),
     stats: (data, preset) => renderStats((data || {}) as Partial<StatsSectionData>, editAttr, preset),
     why_us: (data, preset) => renderWhyUs((data || {}) as Partial<WhyUsSectionData>, editAttr, preset),
-    services: (data, preset) => renderServices((data || {}) as Partial<ServicesSectionData>, editAttr, preset),
-    doctors: (data, preset) => renderDoctors((data || {}) as Partial<DoctorsSectionData>, editAttr, preset),
+    services: (data, preset) => renderServices((data || {}) as Partial<ServicesSectionData>, editAttr, safeSite, preset),
+    doctors: (data, preset) => renderDoctors((data || {}) as Partial<DoctorsSectionData>, editAttr, safeSite, preset),
     reviews: (data, preset) => renderReviews((data || {}) as Partial<ReviewsSectionData>, editAttr, preset),
     hours: (data, preset) => renderHours((data || {}) as Partial<HoursSectionData>, editAttr, preset),
     booking: (data, preset) => renderBooking((data || {}) as Partial<BookingSectionData>, editAttr, safeSite, preset),
@@ -1064,7 +1120,11 @@ export function compileLandingPageToHtml(
     .map((sec) => {
       const fn = sectionRenderers[sec.type];
       const rawHtml = fn ? fn(sec.data, sec.style?.layoutPreset) : "";
-      return applySectionStyles(rawHtml, sec.style, sec);
+      const styledHtml = applySectionStyles(rawHtml, sec.style, sec);
+      if (isEditable) {
+        return `${styledHtml}\n<div class="studio-insert-divider" data-after-id="${sec.id}"><button type="button" class="studio-insert-btn" data-action="insert_after" data-after-id="${sec.id}" title="Add Section Here"><span class="plus-icon">+</span> Add Section</button></div>`;
+      }
+      return styledHtml;
     })
     .join("\n");
 
@@ -1324,18 +1384,6 @@ export function compileLandingPageToHtml(
         z-index: 30;
       }
 
-      /* Corner Ticks (4 corner squares) */
-      .studio-tick {
-        position: fixed;
-        width: 7px;
-        height: 7px;
-        background: #ffffff;
-        border: 1.5px solid var(--primary);
-        z-index: 99998;
-        pointer-events: none;
-        box-sizing: border-box;
-      }
-
       /* Hover Chip */
       #studioHoverBadge {
         position: fixed;
@@ -1345,7 +1393,7 @@ export function compileLandingPageToHtml(
         background: rgba(15, 23, 42, 0.94);
         color: #22d3ee;
         border: 1px solid rgba(6, 182, 212, 0.4);
-        font-family: var(--font-mono), monospace;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-size: 11px;
         font-weight: 600;
         padding: 4px 9px;
@@ -1389,12 +1437,6 @@ export function compileLandingPageToHtml(
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        padding: 0 4px 0 2px;
-      }
-      #studioFloatingBar .sec-dims-tag {
-        color: #94a3b8;
-        font-size: 9.5px;
-        font-family: monospace;
         padding: 0 6px 0 2px;
         border-right: 1px solid rgba(255,255,255,0.18);
       }
@@ -1430,48 +1472,70 @@ export function compileLandingPageToHtml(
         background: var(--primary-hover, #0284c7);
       }
 
-      /* Visual Spatial Padding Indicators */
-      #studioPaddingTop, #studioPaddingBottom {
-        position: fixed;
-        z-index: 99990;
-        display: none;
-        pointer-events: none;
-        background: repeating-linear-gradient(
-          -45deg,
-          rgba(14, 165, 233, 0.07),
-          rgba(14, 165, 233, 0.07) 8px,
-          rgba(14, 165, 233, 0.14) 8px,
-          rgba(14, 165, 233, 0.14) 16px
-        );
-        border-left: 2px dashed rgba(14, 165, 233, 0.4);
-        border-right: 2px dashed rgba(14, 165, 233, 0.4);
-        box-sizing: border-box;
+      /* In-Between Section Inserter Bar */
+      .studio-insert-divider {
+        position: relative;
+        height: 28px;
+        margin: -14px 0;
+        z-index: 99980;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.15s ease;
       }
-      #studioPaddingTop {
-        border-top: 1px dashed rgba(14, 165, 233, 0.5);
-        border-bottom: 1px dashed rgba(14, 165, 233, 0.4);
+      .studio-insert-divider:hover {
+        opacity: 1;
       }
-      #studioPaddingBottom {
-        border-top: 1px dashed rgba(14, 165, 233, 0.4);
-        border-bottom: 1px dashed rgba(14, 165, 233, 0.5);
-      }
-      .studio-pad-badge {
+      .studio-insert-divider::before {
+        content: '';
         position: absolute;
-        right: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(15, 23, 42, 0.85);
-        color: #38bdf8;
+        left: 2rem;
+        right: 2rem;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #0284c7 20%, #0284c7 80%, transparent);
+        pointer-events: none;
+      }
+      .studio-insert-btn {
+        position: relative;
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        border-radius: 9999px;
+        padding: 3px 12px;
+        font-size: 11px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        font-size: 10px;
         font-weight: 600;
-        padding: 2px 7px;
-        border-radius: 4px;
-        letter-spacing: 0.03em;
-        backdrop-filter: blur(4px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-        white-space: nowrap;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+        transition: transform 0.1s ease, background 0.1s ease;
+        backdrop-filter: blur(8px);
         user-select: none;
+      }
+      .studio-insert-btn:hover {
+        background: #0284c7;
+        color: #ffffff;
+        transform: scale(1.05);
+      }
+      .studio-insert-btn .plus-icon {
+        font-size: 13px;
+        font-weight: bold;
+        color: #38bdf8;
+      }
+      .studio-insert-btn:hover .plus-icon {
+        color: #ffffff;
+      }
+      #studioFloatingBar button.btn-add-section {
+        background: rgba(14, 165, 233, 0.18);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+      }
+      #studioFloatingBar button.btn-add-section:hover {
+        background: #0284c7;
+        color: #ffffff;
       }
 
       /* Studio Editor Clean Natural Box (Zero Internal Scrollbars) */
@@ -1518,6 +1582,16 @@ export function compileLandingPageToHtml(
         max-height: 50px;
         overflow: hidden !important;
         white-space: nowrap !important;
+      }
+      /* Studio Button Hover Indicator & Focus */
+      [data-btn-id] {
+        cursor: pointer !important;
+        position: relative;
+        transition: outline 0.15s ease, box-shadow 0.15s ease;
+      }
+      [data-btn-id]:hover {
+        outline: 2px solid var(--primary) !important;
+        outline-offset: 3px !important;
       }
     `
         : ""
@@ -1607,7 +1681,8 @@ export function compileLandingPageToHtml(
         <a href="${navbarBtn.href}" ${navbarBtn.targetAttr} data-btn-id="navbar.cta" class="btn ${navbarBtn.variantClass}" onclick="toggleDropdownMenu(false)" style="margin-top: 1rem; width: 100%;">${escapeHtml(navbarBtn.label)}</a>
       </div>
     </div>
-  </header>`
+  </header>
+  ${isEditable ? `<div class="studio-insert-divider" data-after-id="${navbarBlock.id}"><button type="button" class="studio-insert-btn" data-action="insert_after" data-after-id="${navbarBlock.id}" title="Add Section Below Header"><span class="plus-icon">+</span> Add Section</button></div>` : ""}`
       : ""
   }
 
@@ -1615,7 +1690,7 @@ export function compileLandingPageToHtml(
   ${bodyContent}
 
   <!-- FOOTER -->
-  ${footerBlock ? renderFooter(footer, editAttr, safeSite.name, footerBlock.id) : ""}
+  ${footerBlock ? renderFooter(footer, editAttr, safeSite.name, footerBlock.id, footerBlock.style?.layoutPreset, safeSite) : ""}
 
   <script>
     // Always start at top of page on render
@@ -1693,67 +1768,23 @@ export function compileLandingPageToHtml(
     var activeSectionEl = null;
     var hoverBadge = document.getElementById('studioHoverBadge');
     var hoverText = document.getElementById('studioHoverText');
-    var tickTL = document.getElementById('studioTickTL');
-    var tickTR = document.getElementById('studioTickTR');
-    var tickBL = document.getElementById('studioTickBL');
-    var tickBR = document.getElementById('studioTickBR');
     var floatingBar = document.getElementById('studioFloatingBar');
     var activeTitle = document.getElementById('studioActiveTitle');
-    var activeDims = document.getElementById('studioActiveDims');
-    var padTopEl = document.getElementById('studioPaddingTop');
-    var padTopText = document.getElementById('studioPaddingTopText');
-    var padBottomEl = document.getElementById('studioPaddingBottom');
-    var padBottomText = document.getElementById('studioPaddingBottomText');
 
     function updateActiveOverlay() {
       if (!activeSectionEl || !activeSectionEl.isConnected) {
-        if (tickTL) tickTL.style.display = 'none';
-        if (tickTR) tickTR.style.display = 'none';
-        if (tickBL) tickBL.style.display = 'none';
-        if (tickBR) tickBR.style.display = 'none';
         if (floatingBar) floatingBar.style.display = 'none';
-        if (padTopEl) padTopEl.style.display = 'none';
-        if (padBottomEl) padBottomEl.style.display = 'none';
         return;
       }
 
       var rect = activeSectionEl.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > window.innerHeight) {
-        if (tickTL) tickTL.style.display = 'none';
-        if (tickTR) tickTR.style.display = 'none';
-        if (tickBL) tickBL.style.display = 'none';
-        if (tickBR) tickBR.style.display = 'none';
         if (floatingBar) floatingBar.style.display = 'none';
-        if (padTopEl) padTopEl.style.display = 'none';
-        if (padBottomEl) padBottomEl.style.display = 'none';
         return;
       }
 
       var secName = activeSectionEl.getAttribute('data-section-name') || 'Section';
       if (activeTitle) activeTitle.innerText = secName;
-      if (activeDims) activeDims.innerText = Math.round(rect.width) + ' × ' + Math.round(rect.height) + 'px';
-
-      // Position 4 corner ticks
-      if (tickTL) {
-        tickTL.style.top = (rect.top - 3) + 'px';
-        tickTL.style.left = (rect.left - 3) + 'px';
-        tickTL.style.display = 'block';
-      }
-      if (tickTR) {
-        tickTR.style.top = (rect.top - 3) + 'px';
-        tickTR.style.left = (rect.right - 4) + 'px';
-        tickTR.style.display = 'block';
-      }
-      if (tickBL) {
-        tickBL.style.top = (rect.bottom - 4) + 'px';
-        tickBL.style.left = (rect.left - 3) + 'px';
-        tickBL.style.display = 'block';
-      }
-      if (tickBR) {
-        tickBR.style.top = (rect.bottom - 4) + 'px';
-        tickBR.style.left = (rect.right - 4) + 'px';
-        tickBR.style.display = 'block';
-      }
 
       // Position floating quick-action toolbar at top right
       if (floatingBar) {
@@ -1762,33 +1793,6 @@ export function compileLandingPageToHtml(
         floatingBar.style.top = barTop + 'px';
         floatingBar.style.right = barRight + 'px';
         floatingBar.style.display = 'flex';
-      }
-
-      // Calculate and position visual spatial padding indicators
-      var cs = window.getComputedStyle(activeSectionEl);
-      var pt = parseFloat(cs.paddingTop) || 0;
-      var pb = parseFloat(cs.paddingBottom) || 0;
-
-      if (padTopEl && pt > 8) {
-        padTopEl.style.top = rect.top + 'px';
-        padTopEl.style.left = rect.left + 'px';
-        padTopEl.style.width = rect.width + 'px';
-        padTopEl.style.height = pt + 'px';
-        padTopEl.style.display = 'block';
-        if (padTopText) padTopText.innerText = 'Top: ' + Math.round(pt) + 'px';
-      } else if (padTopEl) {
-        padTopEl.style.display = 'none';
-      }
-
-      if (padBottomEl && pb > 8) {
-        padBottomEl.style.top = (rect.bottom - pb) + 'px';
-        padBottomEl.style.left = rect.left + 'px';
-        padBottomEl.style.width = rect.width + 'px';
-        padBottomEl.style.height = pb + 'px';
-        padBottomEl.style.display = 'block';
-        if (padBottomText) padBottomText.innerText = 'Bottom: ' + Math.round(pb) + 'px';
-      } else if (padBottomEl) {
-        padBottomEl.style.display = 'none';
       }
     }
 
@@ -1828,7 +1832,7 @@ export function compileLandingPageToHtml(
       if (sec && sec !== activeSectionEl && hoverBadge && hoverText) {
         var rect = sec.getBoundingClientRect();
         var name = sec.getAttribute('data-section-name') || 'Section';
-        hoverText.innerText = name + ' • ' + Math.round(rect.width) + ' × ' + Math.round(rect.height) + 'px';
+        hoverText.innerText = name;
         hoverBadge.style.top = Math.max(10, rect.top + 14) + 'px';
         hoverBadge.style.left = Math.max(12, rect.left + 16) + 'px';
         hoverBadge.style.display = 'flex';
@@ -1853,6 +1857,15 @@ export function compileLandingPageToHtml(
         var action = btn.getAttribute('data-action');
         var secId = activeSectionEl.getAttribute('data-section-id') || activeSectionEl.id || '';
         var secType = activeSectionEl.getAttribute('data-section-type') || '';
+
+        if (action === 'add_after') {
+          window.parent.postMessage({
+            type: 'CANVAS_REQUEST_ADD_SECTION',
+            afterSectionId: secId,
+          }, '*');
+          return;
+        }
+
         window.parent.postMessage({
           type: 'CANVAS_SECTION_ACTION',
           action: action,
@@ -1862,9 +1875,41 @@ export function compileLandingPageToHtml(
       });
     }
 
-    // Click inside iframe to select section
+    // Click inside iframe to select section, select button, or trigger in-between inserter
     document.addEventListener('click', function(e) {
+      var insertBtn = e.target && (e.target.hasAttribute && e.target.hasAttribute('data-action') && e.target.getAttribute('data-action') === 'insert_after' ? e.target : e.target.closest && e.target.closest('[data-action="insert_after"]'));
+      if (insertBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var afterId = insertBtn.getAttribute('data-after-id') || '';
+        window.parent.postMessage({
+          type: 'CANVAS_REQUEST_ADD_SECTION',
+          afterSectionId: afterId,
+        }, '*');
+        return;
+      }
+
       if (floatingBar && floatingBar.contains(e.target)) return;
+
+      // 1. Detect if a configurable button was clicked
+      var btnEl = e.target && (e.target.hasAttribute && e.target.hasAttribute('data-btn-id') ? e.target : e.target.closest && e.target.closest('[data-btn-id]'));
+      if (btnEl) {
+        var btnId = btnEl.getAttribute('data-btn-id');
+        var secParent = btnEl.closest('.studio-section');
+        var secId = secParent ? (secParent.getAttribute('data-section-id') || secParent.id || '') : '';
+        if (secParent) {
+          setActiveSection(secParent, false);
+        }
+        e.preventDefault();
+        window.parent.postMessage({
+          type: 'CANVAS_BUTTON_SELECT',
+          buttonId: btnId,
+          sectionId: secId,
+          label: btnEl.innerText ? btnEl.innerText.trim() : '',
+          href: btnEl.getAttribute('href') || ''
+        }, '*');
+        return;
+      }
 
       var sec = e.target && (e.target.classList && e.target.classList.contains('studio-section') ? e.target : e.target.closest && e.target.closest('.studio-section'));
       if (sec) {
@@ -2460,30 +2505,16 @@ export function compileLandingPageToHtml(
       ? `
   <!-- Studio Hover Chip -->
   <div id="studioHoverBadge">
-    <span id="studioHoverText">Section • 1280 × 600px</span>
+    <span id="studioHoverText">Section</span>
   </div>
-
-  <!-- Studio Spatial Padding Visualizers -->
-  <div id="studioPaddingTop" style="display: none;">
-    <span id="studioPaddingTopText" class="studio-pad-badge">Top: 80px</span>
-  </div>
-  <div id="studioPaddingBottom" style="display: none;">
-    <span id="studioPaddingBottomText" class="studio-pad-badge">Bottom: 80px</span>
-  </div>
-
-  <!-- Studio Active Corner Ticks -->
-  <div id="studioTickTL" class="studio-tick" style="display: none;"></div>
-  <div id="studioTickTR" class="studio-tick" style="display: none;"></div>
-  <div id="studioTickBL" class="studio-tick" style="display: none;"></div>
-  <div id="studioTickBR" class="studio-tick" style="display: none;"></div>
 
   <!-- Studio Floating Quick-Action Bar -->
   <div id="studioFloatingBar">
     <span class="sec-grip-icon" title="Active Section">⠿</span>
     <span id="studioActiveTitle" class="sec-title-tag">Hero</span>
-    <span id="studioActiveDims" class="sec-dims-tag">1280 × 640px</span>
     <button type="button" data-action="move_up" title="Move Up">↑ Up</button>
     <button type="button" data-action="move_down" title="Move Down">↓ Down</button>
+    <button type="button" data-action="add_after" title="Insert Section Below" class="btn-add-section">+ Add</button>
     <button type="button" data-action="duplicate" title="Duplicate Section">📋 Duplicate</button>
     <button type="button" data-action="hide" title="Hide Section" class="btn-hide">👁 Hide</button>
     <button type="button" data-action="inspect" title="Customize in Panel" class="btn-inspect">⚙ Inspect</button>

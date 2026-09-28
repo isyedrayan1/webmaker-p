@@ -13,6 +13,7 @@ import {
   Lock,
   Navigation,
   PanelBottom,
+  Plus,
   ShieldCheck,
   Sparkles,
   Star,
@@ -25,6 +26,7 @@ interface SectionNavigatorProps {
   onReorder: (newSections: SectionBlock[]) => void;
   onToggle: (id: string) => void;
   onScrollTo: (id: string) => void;
+  onOpenAddSection?: () => void;
 }
 
 const SECTION_METADATA: Record<
@@ -48,6 +50,7 @@ export function SectionNavigator({
   onReorder,
   onToggle,
   onScrollTo,
+  onOpenAddSection,
 }: SectionNavigatorProps) {
   const isPinned = (type: string) => type === "navbar" || type === "footer";
 
@@ -193,6 +196,17 @@ export function SectionNavigator({
           );
         })}
       </div>
+
+      {onOpenAddSection && (
+        <button
+          type="button"
+          onClick={onOpenAddSection}
+          className="mt-3.5 w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-[hsl(var(--primary)/.4)] bg-[hsl(var(--primary)/.05)] hover:bg-[hsl(var(--primary)/.12)] text-[hsl(var(--primary))] font-semibold text-xs transition shadow-2xs group cursor-pointer"
+        >
+          <Plus size={14} className="transition-transform group-hover:rotate-90 duration-200" />
+          <span>Add Section to Page</span>
+        </button>
+      )}
     </div>
   );
 }

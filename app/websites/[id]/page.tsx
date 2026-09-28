@@ -61,6 +61,7 @@ import {
   type ButtonActionConfig,
   type LandingPageData,
   type SectionBlock,
+  type SectionType,
   type ThemeColor,
   type LogoMode,
   type HeroVisualMode,
@@ -72,7 +73,9 @@ import { exportLandingPageAsZip } from "@/lib/zip-exporter";
 import { ImageUploadModal } from "@/components/canvas/ImageUploadModal";
 import { HeroVisualPicker, LogoModePicker } from "@/components/canvas/ContainerVisualPicker";
 import { AssetManagerDrawer } from "@/components/canvas/AssetManagerDrawer";
-import { InspectorPanel } from "@/components/inspector/InspectorPanel";
+import { InspectorPanel, type InspectorTab } from "@/components/inspector/InspectorPanel";
+import { AddSectionModal } from "@/components/canvas/AddSectionModal";
+import { createNewSection } from "@/lib/section-templates";
 import { toast } from "sonner";
 
 export type SyncStatus = "saved" | "unsaved" | "saving" | "error";
@@ -172,8 +175,18 @@ export default function WebsiteEditorPage({
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [showToolsPanel, setShowToolsPanel] = useState(true);
   const [showAssetDrawer, setShowAssetDrawer] = useState(false);
+  const [showSectionsDrawer, setShowSectionsDrawer] = useState(false);
   const [activeTab, setActiveTab] = useState<"layout" | "media" | "buttons" | "seo">("layout");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>("hero");
+
+  // Add Section Modal State
+  const [addSectionModal, setAddSectionModal] = useState<{
+    isOpen: boolean;
+    afterSectionId?: string | null;
+  }>({
+    isOpen: false,
+    afterSectionId: null,
+  });
 
   // Media & Upload Modal State
   const [uploadModal, setUploadModal] = useState<{
@@ -221,6 +234,7 @@ export default function WebsiteEditorPage({
 
   // Selected Button Inspector ID
   const [selectedButtonId, setSelectedButtonId] = useState<string>("hero.primaryCta");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
 
   // Push state snapshot to history before user mutations
   const pushToHistory = (newData: LandingPageData) => {
@@ -641,7 +655,51 @@ export default function WebsiteEditorPage({
     } else if (action === "inspect") {
       setSelectedSectionId(secId);
       setShowToolsPanel(true);
+    } else if (action === "add_after") {
+      setAddSectionModal({ isOpen: true, afterSectionId: secId });
     }
+  };
+
+  const handleAddSection = (type: SectionType, preset?: string, afterSectionId?: string) => {
+    if (!pageData) return;
+    const newSec = createNewSection(type, preset);
+    const sections = [...pageData.sections];
+
+    let insertIndex = -1;
+    if (afterSectionId) {
+      insertIndex = sections.findIndex((s) => s.id === afterSectionId || s.type === afterSectionId);
+    }
+
+    if (insertIndex !== -1) {
+      sections.splice(insertIndex + 1, 0, newSec);
+    } else {
+      const footerIdx = sections.findIndex((s) => s.type === "footer");
+      if (footerIdx !== -1) {
+        sections.splice(footerIdx, 0, newSec);
+      } else {
+        sections.push(newSec);
+      }
+    }
+
+    // Re-index order property for all sections
+    const reordered = sections.map((sec, idx) => ({ ...sec, order: idx }));
+    const updatedPageData = { ...pageData, sections: reordered };
+
+    pushToHistory(updatedPageData);
+    setSelectedSectionId(newSec.id);
+    setAddSectionModal({ isOpen: false, afterSectionId: null });
+
+    // Smoothly scroll to the newly inserted section
+    setTimeout(() => {
+      handleScrollToSection(newSec.id);
+    }, 150);
+
+    toast.success(`Added ${newSec.type.replace("_", " ")} section`, {
+      action: {
+        label: "Undo",
+        onClick: () => handleUndo(),
+      },
+    });
   };
 
   const handleScrollToSection = (sectionId: string) => {
@@ -1319,6 +1377,38 @@ export default function WebsiteEditorPage({
                 )}
               </button>
 
+              {/* Sections / Outline Drawer Button */}
+              <button
+                onClick={() => {
+                  setShowSectionsDrawer(!showSectionsDrawer);
+                  if (showAssetDrawer) setShowAssetDrawer(false);
+                }}
+                className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold shadow-2xs transition cursor-pointer ${
+                  showSectionsDrawer
+                    ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))]"
+                    : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
+                }`}
+                title="Open Section Navigator & Outline"
+              >
+                <Layers size={14} className="text-[hsl(var(--primary))]" />
+                <span className="hidden sm:inline">Sections</span>
+                {pageData && (
+                  <span className="rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] text-[9px] px-1.5 py-0.2 font-mono-app">
+                    {pageData.sections.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Quick Add Section Button */}
+              <button
+                onClick={() => setAddSectionModal({ isOpen: true, afterSectionId: selectedSectionId })}
+                className="flex h-9 items-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--primary)/.4)] bg-[hsl(var(--primary)/.08)] hover:bg-[hsl(var(--primary)/.16)] text-[hsl(var(--primary))] px-3 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                title="Browse & insert section templates from block library"
+              >
+                <Plus size={14} />
+                <span className="hidden sm:inline">Add Section</span>
+              </button>
+
               {/* Customize / Inspector Toggle Button */}
               <button
                 onClick={() => {
@@ -1428,6 +1518,42 @@ export default function WebsiteEditorPage({
 
       {/* Main Studio Viewport */}
       <main className="relative flex-1 w-full h-[calc(100vh-64px)] overflow-hidden flex flex-row">
+        {/* ================= DOCKED LEFT SECTIONS OUTLINE DRAWER ================= */}
+        {showSectionsDrawer && mode === "edit" && pageData && (
+          <aside className="w-80 lg:w-96 shrink-0 h-full border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col z-20 shadow-xl md:shadow-none fixed md:relative inset-y-0 left-0 top-16 md:top-0 animate-in slide-in-from-left-4 duration-150">
+            <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <Layers size={16} className="text-[hsl(var(--primary))]" />
+                <h3 className="font-semibold text-xs text-[hsl(var(--foreground))] uppercase tracking-wider font-mono-app">
+                  Page Outline
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSectionsDrawer(false)}
+                className="flex h-6 w-6 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition cursor-pointer"
+                title="Close Sections Outline"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              <SectionNavigator
+                sections={pageData.sections}
+                onReorder={handleReorderSections}
+                onToggle={handleToggleSection}
+                onScrollTo={(secId) => {
+                  setSelectedSectionId(secId);
+                  handleScrollToSection(secId);
+                }}
+                onOpenAddSection={() => {
+                  setAddSectionModal({ isOpen: true, afterSectionId: selectedSectionId });
+                }}
+              />
+            </div>
+          </aside>
+        )}
+
         {/* Full-width 100% Canvas Workspace */}
         <div className="flex-1 h-full w-full min-w-0 relative overflow-hidden">
           <BuilderCanvas
@@ -1440,10 +1566,22 @@ export default function WebsiteEditorPage({
             selectedSectionId={selectedSectionId}
             onSelectSection={(secId) => {
               setSelectedSectionId(secId);
+              if (inspectorTab === "button") {
+                setInspectorTab("content");
+              }
+              if (!showToolsPanel) setShowToolsPanel(true);
+            }}
+            selectedButtonId={selectedButtonId}
+            onSelectButton={(btnId) => {
+              setSelectedButtonId(btnId);
+              setInspectorTab("button");
               if (!showToolsPanel) setShowToolsPanel(true);
             }}
             onSectionAction={(action, secId) => {
               handleSectionCanvasAction(action, secId);
+            }}
+            onRequestAddSection={(afterSectionId) => {
+              setAddSectionModal({ isOpen: true, afterSectionId: afterSectionId ?? null });
             }}
           />
         </div>
@@ -1456,7 +1594,14 @@ export default function WebsiteEditorPage({
               onChange={pushToHistory}
               selectedSectionId={selectedSectionId}
               onSelectSection={setSelectedSectionId}
+              selectedButtonId={selectedButtonId}
+              onSelectButton={setSelectedButtonId}
+              activeTab={inspectorTab}
+              onTabChange={setInspectorTab}
               onScrollToSection={handleScrollToSection}
+              onOpenAddSection={() => {
+                setAddSectionModal({ isOpen: true, afterSectionId: selectedSectionId });
+              }}
               onClose={() => setShowToolsPanel(false)}
               onOpenImageModal={(targetField) => {
                 if (targetField.startsWith("doctor.")) {
@@ -1526,6 +1671,17 @@ export default function WebsiteEditorPage({
           }
         }}
       />
+
+      {/* Add Section from Block Library Modal */}
+      {pageData && (
+        <AddSectionModal
+          isOpen={addSectionModal.isOpen}
+          onClose={() => setAddSectionModal({ isOpen: false, afterSectionId: null })}
+          onAddSection={handleAddSection}
+          afterSectionId={addSectionModal.afterSectionId}
+          sections={pageData.sections}
+        />
+      )}
     </div>
   );
 }
