@@ -112,18 +112,6 @@ export function SectionStyleInspector({
 
   return (
     <div className="space-y-4 p-4">
-      {/* Banner Indicator */}
-      <div className="rounded-xl border border-[hsl(var(--primary)/.2)] bg-[hsl(var(--primary)/.05)] p-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Sliders size={14} className="text-[hsl(var(--primary))]" />
-          <h4 className="text-xs font-semibold text-[hsl(var(--foreground))] uppercase tracking-wider font-mono-app">
-            Section Layout &amp; Styling
-          </h4>
-        </div>
-        <p className="text-[11px] text-[hsl(var(--muted-foreground))] leading-snug">
-          Configure structural presets, background treatments, spacing scales, and card styling without breaking mobile viewports.
-        </p>
-      </div>
 
       {/* 1. Layout Preset Grid */}
       {presets.length > 0 && (

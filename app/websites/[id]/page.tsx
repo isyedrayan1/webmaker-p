@@ -234,7 +234,7 @@ export default function WebsiteEditorPage({
 
   // Selected Button Inspector ID
   const [selectedButtonId, setSelectedButtonId] = useState<string>("hero.primaryCta");
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("section");
 
   // Push state snapshot to history before user mutations
   const pushToHistory = (newData: LandingPageData) => {
@@ -1516,11 +1516,15 @@ export default function WebsiteEditorPage({
         )}
       </header>
 
-      {/* Main Studio Viewport */}
-      <main className="relative flex-1 w-full h-[calc(100vh-64px)] overflow-hidden flex flex-row">
-        {/* ================= DOCKED LEFT SECTIONS OUTLINE DRAWER ================= */}
+      {/* Main Studio Viewport with Floating Island Canvas & Panels */}
+      <main
+        className={`relative flex-1 w-full h-[calc(100vh-64px)] overflow-hidden flex flex-row bg-[hsl(var(--muted)/.35)] ${
+          mode === "edit" ? "p-2.5 gap-2.5" : ""
+        }`}
+      >
+        {/* ================= FLOATING LEFT SECTIONS OUTLINE DRAWER ================= */}
         {showSectionsDrawer && mode === "edit" && pageData && (
-          <aside className="w-80 lg:w-96 shrink-0 h-full border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col z-20 shadow-xl md:shadow-none fixed md:relative inset-y-0 left-0 top-16 md:top-0 animate-in slide-in-from-left-4 duration-150">
+          <aside className="w-80 lg:w-96 shrink-0 h-full rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col z-20 shadow-xl overflow-hidden fixed md:relative inset-y-2.5 left-2.5 md:inset-auto md:left-auto top-18 md:top-auto animate-in slide-in-from-left-4 duration-150">
             <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3 shrink-0">
               <div className="flex items-center gap-2">
                 <Layers size={16} className="text-[hsl(var(--primary))]" />
@@ -1554,8 +1558,14 @@ export default function WebsiteEditorPage({
           </aside>
         )}
 
-        {/* Full-width 100% Canvas Workspace */}
-        <div className="flex-1 h-full w-full min-w-0 relative overflow-hidden">
+        {/* Floating Canvas Workspace */}
+        <div
+          className={`flex-1 h-full w-full min-w-0 relative overflow-hidden ${
+            mode === "edit"
+              ? "rounded-2xl border border-[hsl(var(--border))] shadow-xs bg-white"
+              : ""
+          }`}
+        >
           <BuilderCanvas
             site={pageData}
             onChange={pushToHistory}
@@ -1566,15 +1576,13 @@ export default function WebsiteEditorPage({
             selectedSectionId={selectedSectionId}
             onSelectSection={(secId) => {
               setSelectedSectionId(secId);
-              if (inspectorTab === "button") {
-                setInspectorTab("content");
-              }
+              setInspectorTab("section");
               if (!showToolsPanel) setShowToolsPanel(true);
             }}
             selectedButtonId={selectedButtonId}
             onSelectButton={(btnId) => {
               setSelectedButtonId(btnId);
-              setInspectorTab("button");
+              setInspectorTab("section");
               if (!showToolsPanel) setShowToolsPanel(true);
             }}
             onSectionAction={(action, secId) => {
@@ -1586,9 +1594,9 @@ export default function WebsiteEditorPage({
           />
         </div>
 
-        {/* ================= DOCKED RIGHT STUDIO INSPECTOR PANEL ================= */}
+        {/* ================= FLOATING RIGHT STUDIO INSPECTOR PANEL ================= */}
         {showToolsPanel && mode === "edit" && pageData && (
-          <aside className="w-80 lg:w-96 shrink-0 h-full border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col z-20 shadow-xl md:shadow-none fixed md:relative inset-y-0 right-0 top-16 md:top-0 animate-in slide-in-from-right-4 duration-150">
+          <aside className="w-80 lg:w-96 shrink-0 h-full rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col z-20 shadow-xl overflow-hidden fixed md:relative inset-y-2.5 right-2.5 md:inset-auto md:right-auto top-18 md:top-auto animate-in slide-in-from-right-4 duration-150">
             <InspectorPanel
               site={pageData}
               onChange={pushToHistory}

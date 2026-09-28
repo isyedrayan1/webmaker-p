@@ -414,7 +414,7 @@ export function BuilderCanvas({
   // 1. EDIT MODE: 100% Full-Bleed Fluid Canvas (Stable Iframe Key: Zero Reloads!)
   if (mode === "edit") {
     return (
-      <div className="w-full h-full min-h-[calc(100vh-64px)] bg-white flex-1 relative overflow-hidden">
+      <div className="w-full h-full bg-white flex-1 relative overflow-hidden">
         <iframe
           key={`${site.id}-edit`}
           ref={iframeRef}
@@ -433,7 +433,7 @@ export function BuilderCanvas({
             } catch {}
           }}
           title="Live Studio Builder Canvas"
-          className="w-full h-full min-h-[calc(100vh-64px)] border-none bg-white"
+          className="w-full h-full border-none bg-white"
           sandbox="allow-scripts allow-forms allow-modals"
         />
       </div>
